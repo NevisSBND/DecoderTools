@@ -1,4 +1,5 @@
 #include "decoder.hh"
+#include "HeaderInfo.hh"
 
 // Classify word
 WordType get_word_type( uint16_t word ){
@@ -35,7 +36,7 @@ int decoder( const char* argv ){
   TFile rootFile( outFileName.c_str(), "RECREATE" );
 
   // Header information
-  std::vector<uint32_t> header;
+  HeaderInfo header;
   // Matrix of waveforms: 64 channels x N samples
   std::vector< std::vector<uint16_t> > waveform;
   waveform.resize(64);
@@ -67,7 +68,7 @@ int decoder( const char* argv ){
 	  outTree->Fill();
 	  std::cout << "Event " << event << " written to TTree" <<  std::endl;
 	  // Reset
-	  std::fill(header.begin(), header.end(), 0.);
+	  header.clear();
 	  for(size_t ch = 0; ch < 64; ch++){
 	    waveform[ch].clear();
 	  }
@@ -75,36 +76,48 @@ int decoder( const char* argv ){
 	break;
       case kHeaderIDSlot:
 	type = "Header ID+Slot";	
+	header.slot = (word & 0x1F);
+	header.id = ((word>>5) & 0x7F);
 	break;
       case kHeaderNWordsMSB:
-	type = "Header N Words MSB";	
+	type = "Header N Words MSB";
+	header.nwords = ((word<<12) & 0xFFF);
 	break;
       case kHeaderNWordsLSB:
 	type = "Header N Words LSB";	
+	header.nwords = (word & 0xFFF);
 	break;
       case kHeaderEventMSB:
 	type = "Header Event MSB";	
+	header.event = ((word<<12) & 0xFFF);
 	break;
       case kHeaderEventLSB:
 	type = "Header Event LSB";	
+	header.event = (word & 0xFFF);
 	break;
       case kHeaderFrameMSB:
 	type = "Header Frame MSB";	
+	header.frame = ((word<<12) & 0xFFF);
 	break;
       case kHeaderFrameLSB:
 	type = "Header Frame LSB";	
+	header.frame = (word & 0xFFF);
 	break;
       case kHeaderChecksumMSB:
 	type = "Header Checksum MSB";	
+	header.checksum = ((word<<12) & 0xFFF);
 	break;
       case kHeaderChecksumLSB:
 	type = "Header Checksum LSB";
+	header.checksum = (word & 0xFFF);
 	break;
       case kHeaderSampleMSB:
 	type = "Header Sample MSB";
+	// Do nothing for the 6th header pair since it may be buggy/undefined
 	break;
       case kHeaderSampleLSB:
 	type = "Header Sample LSB";      
+	// Do nothing for the 6th header pair since it may be buggy/undefined
 	break;
       case kChannelHeader:
 	type = "Channel Header";
