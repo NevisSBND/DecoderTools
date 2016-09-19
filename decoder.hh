@@ -1,10 +1,3 @@
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <vector>
-#include <TROOT.h>
-#include <TFile.h>
-#include <TTree.h>
 
 // Types of words
 enum WordType{

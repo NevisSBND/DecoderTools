@@ -1,3 +1,12 @@
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <vector>
+
+#include <TROOT.h>
+#include <TFile.h>
+#include <TTree.h>
+
 #include "decoder.hh"
 #include "HeaderInfo.hh"
 
