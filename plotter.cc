@@ -33,13 +33,13 @@ int plotter( const char* argv ){
   TCanvas* canvas = new TCanvas("wfdisplay", "Waveform display", 1600, 700);
   canvas->Divide(4,2);
   std::string prompt;
-  int event = 0;
+  int event = 1;
   int maxEvent = inTree->GetEntries();
   char cmd1[512], cmd2[512]; // Buffers for commands in TTree::Draw
   TMultiGraph* mgr;
   
-  while( prompt != "exit" && event < maxEvent ){
-    sprintf(cmd2, "Entry$==%i", event);
+  while( prompt != "exit" && event <= maxEvent ){
+    sprintf(cmd2, "Entry$==%i", event - 1); // FEM starts counting events from 1 but TTree starts counting entries from 0
     for(int ich = 0; ich < 64; ich++){
       canvas->cd((int)floor(ich/8) + 1); // Plot 8 channels per pad
       sprintf(cmd1, "waveform[%i][]:Iteration$", ich);

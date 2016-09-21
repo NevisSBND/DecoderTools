@@ -70,9 +70,7 @@ int decoder( const char* argv ){
       switch( get_word_type( word ) ){
       case kHeaderFirst:
 	type = "Header First";	
-	event++;
-	std::cout << "Beginning to process event " << event << std::endl;
-	if(event > 1){
+	if(event > 0){
 	  // The beginning of a new event triggers the filling of the last one
 	  outTree->Fill();
 	  std::cout << "Event " << event << " written to TTree" <<  std::endl;
@@ -82,6 +80,8 @@ int decoder( const char* argv ){
 	    waveform[ch].clear();
 	  }
 	}
+	event++;
+	std::cout << "Beginning to process event " << event << std::endl;
 	break;
       case kHeaderIDSlot:
 	type = "Header ID+Slot";	
@@ -157,6 +157,8 @@ int decoder( const char* argv ){
       //std::cout << std::hex << std::setw(4) << words16b[i] << " is " << type <<  std::endl;
     } // end of loop over 2 words
   } // end of reading the file
+  // Write the last event (might be incomplete)
+  outTree->Fill();
 
   binFile.close();
   outTree->Write();
