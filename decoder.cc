@@ -74,11 +74,11 @@ int decoder( const char* argv ){
 	  // The beginning of a new event triggers the filling of the last one
 	  outTree->Fill();
 	  std::cout << "Event " << event << " written to TTree" <<  std::endl;
-	  // Reset
-	  header.clear();
-	  for(size_t ch = 0; ch < 64; ch++){
-	    waveform[ch].clear();
-	  }
+	}
+	// Reset
+	header.clear();
+	for(size_t ch = 0; ch < 64; ch++){
+	  waveform[ch].clear();
 	}
 	event++;
 	std::cout << "Beginning to process event " << event << std::endl;
@@ -131,6 +131,7 @@ int decoder( const char* argv ){
       case kChannelHeader:
 	type = "Channel Header";
 	currentChannel = (word & 0x3F);
+	currentWaveform.clear();
 	std::cout << "Reading channel " << currentChannel << std::endl;
 	break;
       case kADC:
@@ -144,7 +145,7 @@ int decoder( const char* argv ){
 	  waveform[currentChannel] = currentWaveform;
 	  std::cout << "Finished reading channel " << currentChannel << std::endl;
 	}
-	else std::cerr << "ERROR: Channel header ( " << currentChannel << " and ending " << (word & 0x3F) << " do not match" << std::endl;
+	else std::cerr << "ERROR: Channel header " << currentChannel << " and ending " << (word & 0x3F) << " do not match" << std::endl;
 	// Reset
 	currentChannel = 999;
 	currentWaveform.clear();
@@ -155,6 +156,7 @@ int decoder( const char* argv ){
       } // end of switch
       //std::cout << std::setfill('0');
       //std::cout << std::hex << std::setw(4) << words16b[i] << " is " << type <<  std::endl;
+      //std::cout << std::dec; // revert to decimal
     } // end of loop over 2 words
   } // end of reading the file
   // Write the last event (might be incomplete)
