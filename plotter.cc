@@ -51,15 +51,20 @@ int plotter( const char* argv ){
   int event = 1;
   int maxEvent = inTree->GetEntries();
   char cmd1[512], cmd2[512]; // Buffers for commands in TTree::Draw
-  TMultiGraph* mgr;
   int chPad64 = 64/(colPad64 * rowPad64); // Number of channels per pad
   int chPad16 = 64/(int(vcanvas16.size()) * colPad16 * rowPad16); // Number of channels per pad
+  std::vector<TMultiGraph*> vmgr(colPad64 * rowPad64); // Vector of pointers for memory management
+  //  std::vector<TGraph*> vgr2(int(vcanvas16.size()) * colPad16 * rowPad16);
+  std::vector<TGraph*> vgr2; // Vector of pointers for memory management
+  // By using TGraph, it is already assumed that chPad16 will be 1
+  // For a more generic approach, TMultiGraphs should be used
 
-  while( prompt != "exit" && event <= maxEvent ){
+  while( event >= 1 && event <= maxEvent ){
     sprintf(cmd2, "Entry$==%i", event - 1); // FEM starts counting events from 1 but TTree starts counting entries from 0
     for(int ich = 0; ich < 64; ich++){
       // All channels in same canvas
       canvas64->cd( (int)floor(ich/chPad64) + 1 ); // Plot "chPad64" channels per pad
+      TMultiGraph*& mgr = vmgr.at( (size_t)floor(ich/chPad64) ); // Reference pointer
       sprintf(cmd1, "waveform[%i][] + 100.*%i:Iteration$", ich, ich); // Add offset (100.*ich) so channels do not overlap
       //inTree->Draw("waveform[0][]:Iteration$","Entry$==0");
       if( (ich % chPad64) == 0 ){
@@ -69,11 +74,13 @@ int plotter( const char* argv ){
       }
       else inTree->Draw(cmd1, cmd2, "samegoff");
       // Capture output of TTree::Draw
-      TGraph *graph = new TGraph( inTree->GetSelectedRows(), inTree->GetV2(), inTree->GetV1() );
-      graph->SetMarkerColor(ich % 8 + 1); // Use ROOT colors 1 - 8
-      graph->SetLineColor(ich % 8 + 1);
-      graph->SetNameTitle(Form("ch%i", ich), Form("Channel %i", ich));
-      mgr->Add(graph);
+      if( inTree->GetSelectedRows() ){
+	TGraph *graph = new TGraph( inTree->GetSelectedRows(), inTree->GetV2(), inTree->GetV1() );
+	graph->SetMarkerColor(ich % 8 + 1); // Use ROOT colors 1 - 8
+	graph->SetLineColor(ich % 8 + 1);
+	graph->SetNameTitle(Form("ch%i", ich), Form("Channel %i", ich));
+	mgr->Add(graph);
+      }
       if( ((ich + 1) % chPad64) == 0 ) mgr->Draw("APL");
       //canvas64->Update();
 
@@ -87,20 +94,57 @@ int plotter( const char* argv ){
       }
       else inTree->Draw(cmd1, cmd2, "samegoff");
       // Capture output of TTree::Draw
-      TGraph *graph2 = new TGraph( inTree->GetSelectedRows(), inTree->GetV2(), inTree->GetV1() );
-      graph2->SetMarkerColor(ich % 8 + 1); // Use ROOT colors 1 - 8
-      graph2->SetLineColor(ich % 8 + 1);
-      graph2->SetNameTitle(Form("ch%i", ich), Form("Event %i Channel %i; Time (#times 500 ns); ADC", event, ich));
-      graph2->Draw("APL");
+      if( inTree->GetSelectedRows() ){
+	//TGraph *graph2 = new TGraph( inTree->GetSelectedRows(), inTree->GetV2(), inTree->GetV1() );
+	vgr2.push_back( new TGraph( inTree->GetSelectedRows(), inTree->GetV2(), inTree->GetV1() ) );
+	TGraph* graph2 = vgr2.back();
+	graph2->SetMarkerColor(ich % 8 + 1); // Use ROOT colors 1 - 8
+	graph2->SetLineColor(ich % 8 + 1);
+	graph2->SetNameTitle(Form("ch%i", ich), Form("Event %i Channel %i; Time (#times 500 ns); ADC", event, ich));
+	graph2->Draw("APL");
       //vcanvas16.at( canvasIndex )->Update();
+      }
     }
     canvas64->Update();
     for(size_t c = 0; c < vcanvas16.size(); c++){
       vcanvas16.at(c)->Update();
     }
-    event++;
-    std::cout << "Enter \"exit\" to quit" << std::endl;
+    //vcanvas16.at(0)->SaveAs(Form("wfdisplay16_1_ev%i.png", event ));
+
+    std::cout << "\nEnter \"n\" for next event\n";
+    std::cout << "Enter \"exit\" to return to ROOT command line\n";
+    std::cout << "Enter \"p\" for previous event\n";
+    std::cout << "Enter event number in [1, " << maxEvent << "] to go to that event" << std::endl;
+
     std::cin >> prompt;
+    if( prompt == "n" ){
+      if( event < maxEvent ) event++;
+      else std::cout << "You are displaying the last event" << std::endl;
+    }
+    else if( prompt == "exit" ) break;
+    else if( prompt == "p" ){
+      if( event > 1 ) event--;
+      else std::cout << "You are displaying the first event" << std::endl;
+    }
+    else{
+      try{
+	int aux = std::stoi(prompt);
+	if( aux >= 1 && aux <= maxEvent ) event = aux;
+	else std::cout << "Event number out of bounds" << std::endl;
+      }catch(std::invalid_argument& e){
+	std::cout << "Input not recognized" << std::endl;
+      }
+    }
+
+    // Clean memory
+    for(size_t m = 0; m < vmgr.size(); m++){
+      delete vmgr[m]; // Deleting the TMultiGraph deletes all the TGraphs associated
+    }
+    for(size_t g = 0; g < vgr2.size(); g++){
+      delete vgr2[g];
+    }
+    vgr2.clear();
+
   }
   return 1;
 }
