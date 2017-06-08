@@ -1,4 +1,4 @@
 #ifdef __MAKECINT__
-#pragma link C++ class HeaderInfo+;
-#pragma link C++ class vector< vector<uint16_t> >+;
+#pragma link C++ class FEMInfo+;
+#pragma link C++ class XMITInfo+;
 #endif

@@ -1,7 +1,10 @@
-// Class for header information
-class HeaderInfo{
+#ifndef FEMINFO_H
+#define FEMINFO_H
+
+// Class for FEM information
+class FEMInfo{
 public:
-  //void clear(); // Reset header variables
+  // Header information
   uint8_t id = 0; // FEM ID
   uint8_t slot = 0; // FEM slot in crate
   bool test = false; // Test mode flag
@@ -12,7 +15,12 @@ public:
   uint32_t frame = 0; // Frame number
   uint32_t checksum = 0; // Checksum
   // No members for the 6th pair of headers since it may be buggy/undefined yet
-  void clear(){
+
+  // Non-header information
+  uint32_t wordcount = 0; // Actual (counted) number of words in frame
+  uint32_t channelcount = 0; // Actual (counted) number of channels in frame
+
+  void clear_data(){
     id = 0;
     slot = 0;
     test = false;
@@ -22,5 +30,9 @@ public:
     event = 0;
     frame = 0;
     checksum = 0;
+    wordcount = 0;
+    channelcount = 0;
   };
 };
+
+#endif
