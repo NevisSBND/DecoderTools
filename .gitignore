@@ -1,3 +1,4 @@
 *.exe
 *_dict.cc
+*_dict.h
 *_dict_rdict.pcm

@@ -1,3 +1,5 @@
+#include "stdint.h"
+
 // Types of XMIT words (32 bits)
 enum XMITWordType{
   kXMITHeader,
