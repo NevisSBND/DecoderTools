@@ -18,7 +18,8 @@ public:
 
   // Non-header information
   uint32_t wordcount = 0; // Actual (counted) number of words in frame
-  uint32_t channelcount = 0; // Actual (counted) number of channels in frame
+  uint32_t channelcount = 0; // Actual (counted) number of channel headers in frame
+  uint32_t badframecount = 0; // Counted number of channels headers with frame LSBs not matching frame number from header
 
   void clear_data(){
     id = 0;
@@ -32,6 +33,7 @@ public:
     checksum = 0;
     wordcount = 0;
     channelcount = 0;
+    badframecount = 0;
   };
 };
 

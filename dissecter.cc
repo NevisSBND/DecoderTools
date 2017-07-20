@@ -10,8 +10,8 @@
 #include "dissecter.hh"
 #include "XMITInfo.hh"
 
-//bool verbose = false;
-bool verbose = true;
+bool verbose = false;
+//bool verbose = true;
 
 // Classify XMIT word
 XMITWordType get_xmit_word_type( uint32_t word ){
@@ -58,7 +58,7 @@ int dissecter( const char* argv ){
     return 0;
   }
 
-  std::string outFileName = inFileName.substr(0, inFileName.find_last_of(".")) + "_dissect.root";
+  std::string outFileName = inFileName.substr(0, inFileName.find_last_of(".")) + "_dissect_v2.root";
   TFile rootFile( outFileName.c_str(), "RECREATE" );
 
   // XMIT information
@@ -229,6 +229,10 @@ int dissecter( const char* argv ){
 	  feminfo.channelcount++;
 	  feminfo.wordcount++;
 	  if( verbose ) std::cout << "Reading channel " << (word & 0x3F) << std::endl;
+	  if( ((word >> 6) & 0x3F) != (feminfo.frame & 0x3F) ){
+	    if( verbose ) std::cout << "WARNING: Frame LSBs from FEM Channel Header do not match the FEM Header Frame. Data is corrupt!" << std::endl;
+	    feminfo.badframecount++;
+	  }
 	  break;
 
 	case kFEMUnknown:
@@ -240,6 +244,7 @@ int dissecter( const char* argv ){
 	//if( verbose ) std::cout << std::hex << std::setw(4) << words16b[i] << " is " << type <<  std::endl;
 	//if( verbose ) std::cout << std::dec; // revert to decimal
       } // end of loop over 2 words
+      break;
     } // end of XMIT switch
   } // end of reading the file
   // Write the last FEM and XMIT packet (might be incomplete)
