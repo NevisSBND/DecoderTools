@@ -89,6 +89,12 @@ int decoder( const char* argv ){
 	type = "Header First";
 	if(entry > 0){
 	  // The beginning of a new entry triggers the filling of the last one
+	  header.wordcount = (header.wordcount & 0xFFFFFF);
+	  int32_t nwords_diff = header.nwords - header.wordcount;
+	  if( nwords_diff != 0 ) std::cerr << "WARNING: Word count difference: " << nwords_diff << std::endl;
+	  header.mychecksum = (header.mychecksum & 0xFFFFFF);
+	  uint32_t checksum_diff = header.checksum - header.mychecksum;
+	  if( checksum_diff != 0 ) std::cerr << "WARNING: Checksum difference: " << checksum_diff << std::endl;
 	  outTree->Fill();
 	  std::cout << "Entry " << entry << " written to TTree" <<  std::endl;
 	}
@@ -150,17 +156,23 @@ int decoder( const char* argv ){
 	break;
       case kChannelHeader:
 	type = "Channel Header";
+	header.wordcount++;
+	header.mychecksum += word;
 	currentChannel = (word & 0x3F);
 	currentWaveform.clear();
 	std::cout << "Reading channel " << currentChannel << std::endl;
 	break;
       case kADC:
 	type = "ADC";
+	header.wordcount++;
+	header.mychecksum += word;
 	currentWaveform.push_back( (word & 0xFFF) );
 	//std::cout << "ADC value " << (word & 0xFFF) << std::endl;
 	break;
       case kADCHuffman: { // Brackets needed to declare variables
 	type = "ADC Huffman";
+	header.wordcount++;
+	header.mychecksum += word;
 	int zeros = 0; // Counter of 0s interleaved between 1s
 	std::vector<int> differences; // Vector with Huffman-decoded differences
 	differences.reserve(14); // Speed up: reserve for the maximum number of differences stored in a Huffman word
@@ -179,6 +191,8 @@ int decoder( const char* argv ){
       }	break;
       case kChannelEnding:
 	type = "Channel Ending";
+	header.wordcount++;
+	header.mychecksum += word;
 	if( (word & 0x3F) == currentChannel ){
 	  waveform[currentChannel] = currentWaveform;
 	  std::cout << "Finished reading channel " << currentChannel << std::endl;
@@ -189,6 +203,8 @@ int decoder( const char* argv ){
 	currentWaveform.clear();
 	break;
       case kUnknown:
+	header.wordcount++;
+	header.mychecksum += word;
 	type = "Unknown";
 	break;
       } // end of switch
@@ -198,6 +214,12 @@ int decoder( const char* argv ){
     } // end of loop over 2 words
   } // end of reading the file
   // Write the last entry (might be incomplete)
+  header.wordcount = (header.wordcount & 0xFFFFFF);
+  int32_t nwords_diff = header.nwords - header.wordcount;
+  if( nwords_diff != 0 ) std::cerr << "WARNING: Word count difference: " << nwords_diff << std::endl;
+  header.mychecksum = (header.mychecksum & 0xFFFFFF);
+  uint32_t checksum_diff = header.checksum - header.mychecksum;
+  if( checksum_diff != 0 ) std::cerr << "WARNING: Checksum difference: " << checksum_diff << std::endl;
   outTree->Fill();
 
   binFile.close();
