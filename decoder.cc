@@ -77,6 +77,12 @@ int decoder( const char* argv ){
   while( binFile.peek() != EOF ){
     uint32_t word32b;
     binFile.read( reinterpret_cast<char*>(&word32b), sizeof(word32b) );
+    if( (word32b == 0xFFFFFFFF) || (word32b == 0xE0000000) ){ // Temporary: ignore XMIT words
+      std::cout << std::setfill('0');
+      std::cout << "INFO: XMIT word " << std::hex << std::setw(8) << word32b << " found and ignored" <<  std::endl;
+      std::cout << std::dec; // revert to decimal
+      continue;
+    }
     uint16_t first16b = word32b & 0xFFFF;
     uint16_t last16b = (word32b>>16) & 0xFFFF;
     uint16_t words16b[2] = {first16b, last16b};

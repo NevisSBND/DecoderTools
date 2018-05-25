@@ -12,6 +12,8 @@
 #include <TGraph.h>
 #include <TMultiGraph.h>
 
+#include "HeaderInfo.hh"
+
 int plotter( const char* argv ){
   gStyle->SetOptTitle(1); // Title in canvas
   gStyle->SetLineWidth(1); // Thinnest lines
@@ -37,6 +39,8 @@ int plotter( const char* argv ){
 
   std::vector< std::vector<uint16_t> >* waveform = NULL;
   inTree->SetBranchAddress("waveform", &waveform);
+  HeaderInfo* hinfo = NULL;
+  inTree->SetBranchAddress("header", &hinfo);
 
   // Canvas showing 64 channels
   TCanvas* canvas64 = new TCanvas("wfdisplay64", "Waveform display: 64 channels", 1024, 700);
@@ -54,8 +58,8 @@ int plotter( const char* argv ){
   }
 
   std::string prompt;
-  int event = 1;
-  int maxEvent = inTree->GetEntries();
+  int entry = 0;
+  int maxEntry = inTree->GetEntries() - 1;
   int chPad64 = 64/(colPad64 * rowPad64); // Number of channels per pad
   // int chPad16 = 64/(int(vcanvas16.size()) * colPad16 * rowPad16); // Number of channels per pad
   std::vector<TMultiGraph*> vmgr(colPad64 * rowPad64); // Vector of pointers for memory management
@@ -64,13 +68,16 @@ int plotter( const char* argv ){
   // By using TGraph, it is already assumed that chPad16 will be 1
   // For a more generic approach, TMultiGraphs should be used
 
-  while( event >= 1 && event <= maxEvent ){
-    inTree->GetEntry(event - 1);
+  while( entry >= 0 && entry <= maxEntry ){
+    inTree->GetEntry(entry);
+    std::cout << "Processing entry " << entry << ": event " << hinfo->event << ", FEM " << (int)(hinfo->slot) << std::endl;
+
     for(int ich = 0; ich < 64; ich++){
       TMultiGraph*& mgr = vmgr.at( (size_t)floor(ich/chPad64) ); // Reference pointer
       if( (ich % chPad64) == 0 ){
-	mgr = new TMultiGraph( Form("ev%ich%i_%i", event, ich, ich + chPad64 -1),
-			       Form("Event %i channels %i-%i; Time (#times 500 ns); ADC + 100 #times channel #", event, ich, ich + chPad64 -1) );
+	mgr = new TMultiGraph( Form("ev%ifem%ich%i_%i", hinfo->event, (int)(hinfo->slot), ich, ich + chPad64 -1),
+			       Form("Event %i FEM %i channels %i-%i; Time (#times 500 ns); ADC + 100 #times channel #", 
+				    hinfo->event, (int)(hinfo->slot), ich, ich + chPad64 - 1) );
       }
       size_t ichsize = (*waveform)[ich].size();
       std::vector<int> time(ichsize);
@@ -97,7 +104,7 @@ int plotter( const char* argv ){
 	TGraph* graph2 = vgr2.back();
 	graph2->SetMarkerColor(ich % 8 + 1); // Use ROOT colors 1 - 8
 	graph2->SetLineColor(ich % 8 + 1);
-	graph2->SetNameTitle(Form("ch%i", ich), Form("Event %i Channel %i; Time (#times 500 ns); ADC", event, ich));
+	graph2->SetNameTitle(Form("ch%i", ich), Form("Event %i FEM %i Channel %i; Time (#times 500 ns); ADC", hinfo->event, (int)(hinfo->slot), ich));
 	graph2->Draw("APL");
 	//vcanvas16.at( canvasIndex )->Update();
       }
@@ -108,31 +115,32 @@ int plotter( const char* argv ){
       }
     }
     canvas64->Update();
+    //canvas64->Print(".png");
     for(size_t c = 0; c < vcanvas16.size(); c++){
       vcanvas16.at(c)->Update();
     }
-    //vcanvas16.at(0)->SaveAs(Form("wfdisplay16_1_ev%i.png", event ));
+    //vcanvas16.at(0)->SaveAs(Form("wfdisplay16_1_ev%i.png", hinfo->event ));
 
-    std::cout << "\nEnter \"n\" for next event\n";
+    std::cout << "\nEnter \"n\" for next entry\n";
     std::cout << "Enter \"exit\" to return to ROOT command line\n";
-    std::cout << "Enter \"p\" for previous event\n";
-    std::cout << "Enter event number in [1, " << maxEvent << "] to go to that event" << std::endl;
+    std::cout << "Enter \"p\" for previous entryt\n";
+    std::cout << "Enter entry number in [0, " << maxEntry << "] to go to that entry" << std::endl;
 
     std::cin >> prompt;
     if( prompt == "n" ){
-      if( event < maxEvent ) event++;
-      else std::cout << "You are displaying the last event" << std::endl;
+      if( entry < maxEntry ) entry++;
+      else std::cout << "You are displaying the last entry" << std::endl;
     }
     else if( prompt == "exit" ) break;
     else if( prompt == "p" ){
-      if( event > 1 ) event--;
-      else std::cout << "You are displaying the first event" << std::endl;
+      if( entry > 1 ) entry--;
+      else std::cout << "You are displaying the first entry" << std::endl;
     }
     else{
       try{
 	int aux = std::stoi(prompt);
-	if( aux >= 1 && aux <= maxEvent ) event = aux;
-	else std::cout << "Event number out of bounds" << std::endl;
+	if( aux >= 0 && aux <= maxEntry ) entry = aux;
+	else std::cout << "Entry number out of bounds" << std::endl;
       }catch(std::invalid_argument& e){
 	std::cout << "Input not recognized" << std::endl;
       }
