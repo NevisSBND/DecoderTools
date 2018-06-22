@@ -13,3 +13,8 @@ To plot a decoded file, run
 ```
 ./plotter.exe your_decoded_nevis_tpc_file.root
 ```
+To create the channel map, run
+```
+./channel_mapper.exe your_decoded_nevis_tpc_file.root your_bnl_pin_mapping.txt
+```
+where your_decoded_nevis_tpc_file.root corresponds to a run taken with BNL electronics in channel-map mode and your_bnl_pin_mapping.txt is a text file provided by BNL.
