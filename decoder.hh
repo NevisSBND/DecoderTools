@@ -1,7 +1,7 @@
 
 // Types of words
 enum WordType{
-  kHeaderFirst,
+  kHeaderFirst = 0,
   kHeaderIDSlot,
   kHeaderNWordsMSB,
   kHeaderNWordsLSB,

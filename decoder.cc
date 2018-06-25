@@ -13,19 +13,16 @@
 // Classify word
 WordType get_word_type( uint16_t word ){
   static int headerCounter = 0; // Initialized only the first time
-  if( ((word & 0xF000) == 0xF000)
-      || headerCounter < 12 // Hack: since 6th header pair does not start with "F". Bug?
-      ){
+  if( (word & 0xF000) == 0xF000){
+    WordType type = static_cast<WordType>( kHeaderFirst + headerCounter );
     headerCounter++;
-    return static_cast<WordType>( kHeaderFirst + headerCounter - 1 );
+    if( headerCounter == 12 ) headerCounter = 0;
+    return type;
   }
   if( (word & 0xF000) == 0x4000 ) return kChannelHeader;
-  if( (word & 0xF000) == 0x0000 ) return kADC;
+  if( (word & 0xF000) == 0x0000 ) return kADC; // Can also be 0x0000 padding...
   if( (word & 0xC000) == 0x8000 ) return kADCHuffman; // Look for headers first
-  if( (word & 0xF000) == 0x5000 ){
-    if( (word & 0x3F) == 63 ) headerCounter = 0; // Hack: look for header only after channel 63 is finished
-    return kChannelEnding;
-  }
+  if( (word & 0xF000) == 0x5000 ) return kChannelEnding;
   else return kUnknown;
 }
 
@@ -66,7 +63,7 @@ int decoder( const char* argv ){
   // Matrix of waveforms: 64 channels x N samples
   std::vector< std::vector<uint16_t> > waveform;
   waveform.resize(64);
-  size_t currentChannel;
+  size_t currentChannel = 999;
   std::vector<uint16_t> currentWaveform;
 
   TTree* outTree = new TTree("decoderTree", "Decoder output tree");
@@ -169,11 +166,13 @@ int decoder( const char* argv ){
 	std::cout << "Reading channel " << currentChannel << std::endl;
 	break;
       case kADC:
-	type = "ADC";
-	header.wordcount++;
-	header.mychecksum += word;
-	currentWaveform.push_back( (word & 0xFFF) );
-	//std::cout << "ADC value " << (word & 0xFFF) << std::endl;
+	if( currentChannel != 999 ){
+	  type = "ADC";
+	  header.wordcount++;
+	  header.mychecksum += word;
+	  currentWaveform.push_back( (word & 0xFFF) );
+	  //std::cout << "ADC value " << (word & 0xFFF) << std::endl;
+	} else type = "Padding";
 	break;
       case kADCHuffman: { // Brackets needed to declare variables
 	type = "ADC Huffman";
