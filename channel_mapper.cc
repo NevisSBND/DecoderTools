@@ -14,7 +14,8 @@
 // Struct holding all values that define a channel
 struct channel_address{
 
-  int fWire; // TPC wire within plane
+  int fLArWire; // LArSoft wire
+  int fOrigWire; // TPC wire within plane
   std::string fPlane; // Plane withing TPC
   std::string fAdapterConnector; // BNL adapter board connector
   int fAdapterPin; // BNL adapter board pin
@@ -25,20 +26,24 @@ struct channel_address{
   int fFEMBch; // BNL FEM channel
   int fFEMB; // BNL FEMB number
   int fWIB; // WIB number
+  int fADCDec; // Channel-map mode ADC value (decimal)
+  std::string fADCHex; // Channel-map mode ADC value (hex)
   int fSlot; // Nevis FEM slot within crate
   int fFEMch; // Channel within Nevis FEM
 
   channel_address() 
-    : fWire(-1), fPlane("NotUsed"), fAdapterConnector("N/A"), fAdapterPin(-1), fAnalogConnector(-1), fAnalogPin(-1), 
-      fASIC(-1), fASICch(-1), fFEMBch(-1), fFEMB(-1), fWIB(-1),
+    : fLArWire(-1), fOrigWire(-1), fPlane("NotUsed"), fAdapterConnector("N/A"), fAdapterPin(-1), fAnalogConnector(-1), fAnalogPin(-1), 
+      fASIC(-1), fASICch(-1), fFEMBch(-1), fFEMB(-1), fWIB(-1), fADCDec(-1), fADCHex("NAN"),
       fSlot(-1), fFEMch(-1) {}
 
-  channel_address( int newWire, std::string newPlane, std::string newAdapterConnector, int newAdapterPin, int newAnalogConnector, int newAnalogPin,
-		   int newAsic, int newAsicch, int newFembch, int newFemb, int newWib,
+  channel_address( int newLarwire, int newOrigwire, std::string newPlane, 
+		   std::string newAdapterConnector, int newAdapterPin, int newAnalogConnector, int newAnalogPin,
+		   int newAsic, int newAsicch, int newFembch, int newFemb, int newWib, int newAdcdec, std::string newAdchex,
 		   int newSlot = -1, int newFemch = -1 )
-    : fWire(newWire), fPlane(newPlane), fAdapterConnector(newAdapterConnector), fAdapterPin(newAdapterPin), 
+    : fLArWire(newLarwire), fOrigWire(newOrigwire), fPlane(newPlane), 
+      fAdapterConnector(newAdapterConnector), fAdapterPin(newAdapterPin), 
       fAnalogConnector(newAnalogConnector), fAnalogPin(newAnalogPin),
-      fASIC(newAsic), fASICch(newAsicch), fFEMBch(newFembch), fFEMB(newFemb), fWIB(newWib),
+      fASIC(newAsic), fASICch(newAsicch), fFEMBch(newFembch), fFEMB(newFemb), fWIB(newWib), fADCDec(newAdcdec), fADCHex(newAdchex),
       fSlot(newSlot), fFEMch(newFemch) {}
 };
 
@@ -49,14 +54,16 @@ int channel_mapper( const char* mapper_run, const char* bnl_map_filename ){
   // Read text file with BNL pin mapping
   std::ifstream BNLFile;
   // Variables to read the text file
-  int wire, adapterPin, analogConnector, analogPin, asic, asicch, fembch, femb, wib;
-  std::string plane, adapterConnector;
+  int larwire, origwire, adapterPin, analogConnector, analogPin, asic, asicch, fembch, femb, wib, adcdec;
+  std::string plane, adapterConnector, adchex;
   BNLFile.open( bnl_map_filename );
   // Expects LArIAT_Pin_Mapping.xlsx to be saved as plain text file with columns separated by spaces 
-  while( BNLFile >> wire >> plane >> adapterConnector >> adapterPin >> analogConnector >> analogPin >> asic >> asicch >> fembch >> femb >> wib ){
+  while( BNLFile >> larwire >> origwire >> plane >> adapterConnector >> adapterPin >> analogConnector >> analogPin >> 
+	 asic >> asicch >> fembch >> femb >> wib >> adcdec >> adchex ){
     // Build same key as the one produced by the BNL electronics running in channel-map mode
     // ASIC number goes from 1-8 in text file. We subtract 1 to make it 0-7 (used by the binary file)
-    channel_address thisChannelAddress( wire, plane, adapterConnector, adapterPin, analogConnector, analogPin, asic -1, asicch, fembch, femb, wib ); 
+    channel_address thisChannelAddress( larwire, origwire, plane, adapterConnector, adapterPin, analogConnector, analogPin, 
+					asic -1, asicch, fembch, femb, wib, adcdec, adchex ); 
     int BNLKey = ( (thisChannelAddress.fFEMB & 0xF) << 8 ) + ( (thisChannelAddress.fASIC & 0xF) << 4 ) + (thisChannelAddress.fASICch & 0xF);
 
     // Test if the key already existed when filling the map
@@ -179,11 +186,12 @@ int channel_mapper( const char* mapper_run, const char* bnl_map_filename ){
   channelMap_file.open( channelMap_filename_txt, std::ios::out );
   for( std::map< int, channel_address >::iterator it = channelMap.begin(); it != channelMap.end(); ++it){
     channel_address& val = it->second;
-    channelMap_file << std::right << std::setw(3) << val.fWire << " " << std::setw(10) << val.fPlane << " " 
+    channelMap_file << std::right << std::setw(3) << val.fLArWire << " " << std::setw(3) << val.fOrigWire << " " << std::setw(10) << val.fPlane << " " 
 		     << std::setw(3) << val.fAdapterConnector << " " << std::setw(2) << val.fAdapterPin << " " 
 		     << std::setw(2) << val.fAnalogConnector << " " << std::setw(2) << val.fAnalogPin << " "
 		     << std::setw(2) << val.fASIC << " " << std::setw(2) << val.fASICch << " "
 		     << std::setw(3) << val.fFEMBch << " " << std::setw(2) << val.fFEMB << " " << std::setw(2) << val.fWIB << " "
+		     << std::setw(4) << val.fADCDec << " " << std::setw(3) << val.fADCHex << " "
 		     << std::setw(2) << val.fSlot << " " << std::setw(2) << val.fFEMch << std::endl;
   }
   channelMap_file.close();
@@ -193,7 +201,7 @@ int channel_mapper( const char* mapper_run, const char* bnl_map_filename ){
   TFile outFile( channelMap_filename_root.c_str(), "RECREATE" );
   TTree* mapTree = new TTree( "channelMapTree", "Tree with the LArIAT VST channel map" );
   mapTree->ReadFile( channelMap_filename_txt.c_str(), 
-		     "wire/I:plane/C:adapterconnector/C:adapterpin/I:analogconnector:analogpin:asic:asicch:fembch:femb:wib:slot:femch" );
+		     "larwire/I:origwire/I:plane/C:adapterconnector/C:adapterpin/I:analogconnector/I:analogpin/I:asic/I:asicch/I:fembch/I:femb:wib/I:adcdec/I:adchex/C:slot/I:femch/I" );
   mapTree->Write();
   outFile.Close();
 
