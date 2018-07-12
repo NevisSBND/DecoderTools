@@ -116,6 +116,7 @@ int decoder( const char* argv ){
 	header.test = ((word>>9) & 0x1);
 	header.overflow = ((word>>10) & 0x1);
 	header.full = ((word>>11) & 0x1);
+	std::cout << "FEM " << (int)header.slot << std::endl;
 	break;
       case kHeaderNWordsMSB:
 	type = "Header N Words MSB";
@@ -132,6 +133,7 @@ int decoder( const char* argv ){
       case kHeaderEventLSB:
 	type = "Header Event LSB";
 	header.event += (word & 0xFFF);
+	std::cout << "Event " << (int)header.event << std::endl;
 	break;
       case kHeaderFrameMSB:
 	type = "Header Frame MSB";
@@ -140,6 +142,7 @@ int decoder( const char* argv ){
       case kHeaderFrameLSB:
 	type = "Header Frame LSB";
 	header.frame += (word & 0xFFF);
+	std::cout << "Frame " << (int)header.frame << std::endl;
 	break;
       case kHeaderChecksumMSB:
 	type = "Header Checksum MSB";
