@@ -154,11 +154,12 @@ int decoder( const char* argv ){
 	break;
       case kHeaderSampleMSB:
 	type = "Header Sample MSB";
-	// Do nothing for the 6th header pair since it may be buggy/undefined
+	header.triggerframe = ((word >> 4) & 0xF);
+	header.triggersample += ((word & 0xF)<<8);
 	break;
       case kHeaderSampleLSB:
 	type = "Header Sample LSB";
-	// Do nothing for the 6th header pair since it may be buggy/undefined
+	header.triggersample += (word & 0xFF);
 	break;
       case kChannelHeader:
 	type = "Channel Header";

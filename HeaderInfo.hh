@@ -1,7 +1,6 @@
 // Class for header information
 class HeaderInfo{
 public:
-  //void clear(); // Reset header variables
   uint8_t id = 0; // FEM ID
   uint8_t slot = 0; // FEM slot in crate
   bool test = false; // Test mode flag
@@ -11,13 +10,14 @@ public:
   uint32_t event = 0; // Event number
   uint32_t frame = 0; // Frame number
   uint32_t checksum = 0; // Checksum
+  uint8_t triggerframe = 0; // Lower 4 bits of trigger frame number
+  uint32_t triggersample = 0; // Trigger 2-MHz sample number
 
   // Crosscheck header information
   uint32_t wordcount = 0; // Actual (counted) number of words in frame
   uint32_t mychecksum = 0; // Manual checksum
 
-  // No members for the 6th pair of headers since it may be buggy/undefined yet
-  void clear(){
+  void clear(){ // Reset header variables
     id = 0;
     slot = 0;
     test = false;
@@ -27,6 +27,8 @@ public:
     event = 0;
     frame = 0;
     checksum = 0;
+    triggerframe = 0;
+    triggersample = 0;
     wordcount = 0;
     mychecksum = 0;
   };
