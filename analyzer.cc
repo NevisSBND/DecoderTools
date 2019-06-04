@@ -14,6 +14,7 @@ int analyzer( const char* runFile ){
   double triggerRate = 0.2; // in Hz
   double frameLength = 2560.; // in 2 MHz samples
   int NFEMs = 10; // number of FEMs
+  int firstFEM = 4; // slot of the first FEM
 
   // Input ROOT file
   TFile inFile( runFile, "READ" );
@@ -57,8 +58,8 @@ int analyzer( const char* runFile ){
   hEvents->Fill((int)hinfo->event);
   int prevEvent = (int)hinfo->event;
 
-  int prevSlot = 4;
-  int thisSlot = 4;
+  int prevSlot = firstFEM;
+  int thisSlot = firstFEM;
   int aux = 0;
 
   double triggerGaps = 0; // Unexpected gap between triggers (missing triggers?)
@@ -83,6 +84,7 @@ int analyzer( const char* runFile ){
 
     thisSlot = (int)hinfo->slot;
 
+    // Look for missed triggers when the frame difference between FEMs is bigger than the tolerance
     if( deltaFrame > 1.05/(triggerRate * frameLength * 0.5e-6) ){ // 1.05 --> add 5% tolerance
       std::cout << "\n\nTRIGGER GAP" << std::endl;
       std::cout << "\tPREVIOUS EVENT" << std::endl;
@@ -90,12 +92,14 @@ int analyzer( const char* runFile ){
       std::cout << "\tTHIS EVENT" << std::endl;
       for( int j = i; j < i + NFEMs; j++ ) inTree->Show(j);
       triggerGaps++;
-      if( thisSlot != 4 && prevSlot != 4 + NFEMs - 1 ){
+      // If the frame difference occurs in the middle of a crate-readout, FEMs are desynchronized
+      if( thisSlot != firstFEM && prevSlot != firstFEM + NFEMs - 1 ){
 	std::cout << "DESYNC. Enter anything to continue" << std::endl;
 	std::cin >> aux;
       }
     }
 
+    // Look for event jumps
     if(deltaEvent > 1){
       std::cout << "\n\nMISSING EVENT" << std::endl;
       std::cout << "\tPREVIOUS EVENT" << std::endl;
@@ -103,7 +107,8 @@ int analyzer( const char* runFile ){
       std::cout << "\tTHIS EVENT" << std::endl;
       for( int j = i; j < i + NFEMs; j++ ) inTree->Show(j);
       eventJumps++;
-      if( thisSlot != 4 && prevSlot != 4 + NFEMs - 1 ){
+      // If the event difference occurs in the middle of a crate-readout, FEMs are desynchronized
+      if( thisSlot != firstFEM && prevSlot != firstFEM + NFEMs - 1 ){
 	std::cout << "DESYNC. Enter anything to continue" << std::endl;
 	std::cin >> aux;
       }
