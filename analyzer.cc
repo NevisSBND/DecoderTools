@@ -287,12 +287,12 @@ int analyzer( const char* runFile ){
 		   	nword_channel_Huff_min[k] = *std::min_element(Huffman_size.begin(),Huffman_size.end());	
 			
 			//get the checksum of selected number (sample_size) of samples in each channel
-			checksum_channel[k]=std::accumulate(mywaveform.begin(), mywaveform.begin()+sample_size, 0);
+			checksum_channel[k]=std::accumulate(mywaveform.begin(), mywaveform.begin()+sample_size, 0L);
 		}
 		else if(!is_reference){
 			//calculate the checksum of 'sample_size' ADC words for test run..
 			for(int l=0; l<samplenum+1-sample_size; l++){
-				long int test_checksum = std::accumulate(mywaveform.begin()+l, mywaveform.begin()+l+sample_size,0);
+				long int test_checksum = std::accumulate(mywaveform.begin()+l, mywaveform.begin()+l+sample_size,0L);
 				if(test_checksum != ref_checksum_channel[k]) std::cout << "Waveform Different!! \t|| reference: " << ref_checksum_channel[k] << "\t test: " << test_checksum << std::endl;
 			}
 		}
@@ -437,8 +437,8 @@ int analyzer( const char* runFile ){
 	  max_event.Write("max_event");
 
 	  //write the range of nword for one slot: 0->Max, 1->Min
-	  nword_slot[0]=std::accumulate(nword_channel_Huff_max.begin(), nword_channel_Huff_max.end(),0);
-	  nword_slot[1]=std::accumulate(nword_channel_Huff_min.begin(), nword_channel_Huff_min.end(),0);
+	  nword_slot[0]=std::accumulate(nword_channel_Huff_max.begin(), nword_channel_Huff_max.end(),0L);
+	  nword_slot[1]=std::accumulate(nword_channel_Huff_min.begin(), nword_channel_Huff_min.end(),0L);
 	  rootFile.WriteObject(&nword_slot, "nword_slot");  //write this vector to output file.
 
 	  //write the checksum of certain number of ADC words for every channel (64 channels) 
