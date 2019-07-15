@@ -121,7 +121,7 @@ int analyzer( const char* runFile ){
    TH2D* hTriggerSamComp = new TH2D("hTriggerSamComp","Trigger sample difference between first slot and other slots within 1 event;Slot;trigger sample difference; entries", NFEMs-1, firstFEM+1, firstFEM+NFEMs,100,-500,500);
 
   //real-time trigger rate calculated from each slot.
-  TH2D *hFrameTrigger=new TH2D("hFrameTrigger", "Real-time triggerRate calculated by the frame difference; Slot; Trigger Rate; entries", NFEMs, firstFEM, firstFEM+NFEMs, (int)2*triggerRate, 0, 2*triggerRate);
+  TH2D *hFrameTrigger=new TH2D("hFrameTrigger", "Real-time triggerRate calculated by the frame difference; Slot; Trigger Rate; entries", NFEMs, firstFEM, firstFEM+NFEMs, (int)8*triggerRate, 0, 4*triggerRate);
   
 
   //simply the distribution of all the variables for difference FEMs.
@@ -129,8 +129,8 @@ int analyzer( const char* runFile ){
   TH2D *hOverflow = new TH2D("hOverflow", "Overflow distribution;Slot; Overflow flag; Entries", NFEMs, firstFEM, firstFEM+NFEMs, 2, 0,2);
   TH2D *hFull = new TH2D("hFull", "FullDistribution; Slot;Full flag; Entries",NFEMs, firstFEM, firstFEM+NFEMs, 2,0,2);
   TH2D *hId = new TH2D("hId", "ID; Slot;ID; Entries", NFEMs, firstFEM, firstFEM+NFEMs,127,0,127);
-  TH2D *hnwords = new TH2D("hnwords", "distribution of number of words; Slot; number of words; entries",NFEMs, firstFEM, firstFEM+NFEMs,10000, 0,100000);
-  TH2D *hwordcount = new TH2D("hwordcount", "distribution of manually counted number of words;Slot; wordcount; entries",NFEMs, firstFEM, firstFEM+NFEMs, 10000, 0,100000);
+  TH2D *hnwords = new TH2D("hnwords", "distribution of number of words; Slot; number of words; entries",NFEMs, firstFEM, firstFEM+NFEMs,10000, 0,1000000);
+  TH2D *hwordcount = new TH2D("hwordcount", "distribution of manually counted number of words;Slot; wordcount; entries",NFEMs, firstFEM, firstFEM+NFEMs, 10000, 0,1000000);
   TH2D *hdiff_nword = new TH2D("hdiff_nword", "number of words - wordcount;Slot; number of words - wordcount; entries", NFEMs, firstFEM, firstFEM+NFEMs,20,-10,10);
   TH2D *hFrames = new TH2D("hFrames", "Event Frame numbers;Slot;Frame;Entries", NFEMs, firstFEM, firstFEM+NFEMs,16778, 0, 16778000);   //largest frame number is 16777215
  //hFrames->SetDirectory(gROOT);  
@@ -199,7 +199,7 @@ int analyzer( const char* runFile ){
   double MAX_EVENT = DBL_MIN; //max event number
   std::vector<double> prev_frame(NFEMs, -999);  //a vector to save the frame info of all FEMs from last event;
   std::vector<long int> ref_checksum_channel;
-  std::vector<long int>* pointer_checksum_channel;
+  std::vector<long int>* pointer_checksum_channel=NULL;
 
 
   
@@ -490,6 +490,7 @@ int analyzer( const char* runFile ){
 	  hTMin->Write();
 	  hTTriggerRate->Write();
 	  hFrameTrigger->Write();
+	  gROOT->SetBatch(kTRUE); //set it to batch mode, not plotting graphs interactively, for background running.
 	  TCanvas * c = new TCanvas("reference", "reference plots");
 	  gPad->SetLogz(1);  
 	  gStyle->SetOptStat(0);
@@ -799,6 +800,7 @@ int analyzer( const char* runFile ){
 	  double z_max, z_min, z_maxT, z_minT; //maximum and minimum of z values for two plots
 
 	  rootFile.cd();
+	  gROOT->SetBatch(kTRUE);
 	  TCanvas *c = new TCanvas("c", "c");
 	  
 	  gStyle->SetOptStat("ou");   //show overflow and undeflow in stat box
