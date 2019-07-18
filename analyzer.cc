@@ -132,10 +132,11 @@ int analyzer( const char* runFile ){
   TH2D *hnwords = new TH2D("hnwords", "distribution of number of words; Slot; number of words; entries",NFEMs, firstFEM, firstFEM+NFEMs,10000, 0,1000000);
   TH2D *hwordcount = new TH2D("hwordcount", "distribution of manually counted number of words;Slot; wordcount; entries",NFEMs, firstFEM, firstFEM+NFEMs, 10000, 0,1000000);
   TH2D *hdiff_nword = new TH2D("hdiff_nword", "number of words - wordcount;Slot; number of words - wordcount; entries", NFEMs, firstFEM, firstFEM+NFEMs,20,-10,10);
-  TH2D *hFrames = new TH2D("hFrames", "Event Frame numbers;Slot;Frame;Entries", NFEMs, firstFEM, firstFEM+NFEMs,16778, 0, 16778000);   //largest frame number is 16777215
- //hFrames->SetDirectory(gROOT);  
-  TH2D *hDeltaFrame = new TH2D("hDeltaFrame", "Frame difference;Slot;#DeltaFrame;Entries",NFEMs, firstFEM, firstFEM+NFEMs, 9999, 1, 10000);
-  TH2D *hEvents = new TH2D("hEvents", "Event numbers;Slot;Event;Entries",NFEMs, firstFEM, firstFEM+NFEMs, EventRange,0, EventRange*EventBin);  //largest event number is 16777215
+  TH2D *hFrames = new TH2D("hFrames", "Event Frame numbers;Frame/1000;Slot;Entries",16778, 0, 16778000, NFEMs, firstFEM, firstFEM+NFEMs);   //largest frame number is 16777215
+ //hFrames->SetDirectory(gROOT);
+  TH2D *hDeltaFrame = new TH2D("hDeltaFrame", "Frame difference;#DeltaFrame;Slot;Entries", 2000, 0, 2000, NFEMs, firstFEM, firstFEM+NFEMs);  
+  //TH2D *hDeltaFrame = new TH2D("hDeltaFrame", "Frame difference;Slot;#DeltaFrame;Entries",NFEMs, firstFEM, firstFEM+NFEMs, 9999, 1, 10000);
+  TH2D *hEvents = new TH2D("hEvents", "Event numbers;Event number/10 events;Slot;Entries",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);  //largest event number is 16777215
   TH2D *hDeltaEvent = new TH2D("hDeltaEvent", "Event no. difference;Slot;#DeltaEvent;Entries",NFEMs, firstFEM, firstFEM+NFEMs, 5, 0, 5);
   TH2D *hChecksum = new TH2D("hChecksum", "checksum from readout FEM header words;Slot; checksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 16778, 0, 16778000);
   TH2D *hdiff_checksum = new TH2D("hdiff_checksum", "checksum - mychecksum;Slot; checksum - mychecksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 8200,-4100,4100);
@@ -280,7 +281,8 @@ int analyzer( const char* runFile ){
 				//permute the waveform to get range of total number of words
 				std::vector<unsigned int> sort_wave(mywaveform.begin()+l, mywaveform.end());	
 				sort_wave.insert(sort_wave.end(), mywaveform.begin(), mywaveform.begin()+l);
-				Huffman_size.push_back(encode_Huffman(sort_wave));
+				//remember: the nwords is smaller than wrodcount by 1 for one full SLOT, not for each channel!!
+				Huffman_size.push_back(encode_Huffman(sort_wave)+2);  //to account for the channel header and trailer
 			}
 			//for waveforms with different starting point, get the maximum nwords and minimum nwords under Huffman compression.
 			nword_channel_Huff_max[k] = *std::max_element(Huffman_size.begin(),Huffman_size.end());		
@@ -317,9 +319,9 @@ int analyzer( const char* runFile ){
     hTwordcount->Fill(event,slot, wordcount);
     hdiff_nword->Fill(slot,nwords-wordcount);
     hTdiff_nword->Fill( event,slot, nwords - wordcount);
-    hFrames->Fill(slot,frame);
+    hFrames->Fill(frame,slot);
     hTFrames->Fill(event,slot, frame);
-    hEvents->Fill(slot,event);
+    hEvents->Fill(event,slot);
     hTEvents->Fill( event,slot,event);
     hChecksum->Fill(slot,checksum);
     hTChecksum->Fill(event,slot, checksum);
@@ -345,7 +347,7 @@ int analyzer( const char* runFile ){
  
    //comparison between two adjecent FEMs (peridically).
     int deltaFrame = frame - prev_frame[(i-1)%NFEMs];
-    hDeltaFrame->Fill(slot,deltaFrame);
+    hDeltaFrame->Fill(deltaFrame,slot);
     hTDeltaFrame->Fill(event,slot, deltaFrame);
     if( deltaFrame != 0 ) totalTriggers++;
 
@@ -812,7 +814,7 @@ int analyzer( const char* runFile ){
 	  //draw Frame info.
 	  hRef = (TH2D*)refFile->Get("hFrames");
 	  hTRef = (TH2D*)refFile->Get("hTFrames");
-	  hRef->Scale(MAX_EVENT/ref_event); //scale the reference plots with the same total number of events
+	  //hRef->Scale(MAX_EVENT/ref_event); //scale the reference plots with the same total number of events
 	  hTRef->SetAxisRange(0,EventRange*EventBin, "X");   //cut the X range so that reference plot and test run plot match.
 	  z_max = hRef->GetMaximum();
 	  z_min = hRef->GetMinimum();
@@ -823,11 +825,13 @@ int analyzer( const char* runFile ){
 	  gPad->SetLogz(1);    //set log scale on z.
 	  if(hFrames->GetMaximum() > z_max) z_max = hFrames->GetMaximum();
 	  if(hFrames->GetMinimum() < z_min) z_min = hFrames->GetMinimum();
+	  hFrames->SetAxisRange(0, prev_frame[(entries-1)%NFEMs], "X");
 	  hFrames->SetAxisRange(z_min-1, z_max+1, "Z");
 	  hFrames->Draw("colz");
 	  c->cd(2);
 	  gPad->SetLogz(1);    //set log scale on z.
 	  hRef->SetAxisRange(z_min-1, z_max+1, "Z"); 
+	  hRef->SetAxisRange(0, prev_frame[(entries-1)%NFEMs], "X");
 	  hRef->SetTitle("reference run");
 	  hRef->Draw("colz");
 	  c->Update();
@@ -857,7 +861,7 @@ int analyzer( const char* runFile ){
 
 	  hRef = (TH2D*)refFile->Get("hEvents");
 	  hTRef = (TH2D*)refFile->Get("hTEvents");
-	  hRef->Scale(MAX_EVENT/ref_event); //scale the reference plots with the same total number of events
+	  //hRef->Scale(MAX_EVENT/ref_event); //scale the reference plots with the same total number of events
 	  hTRef->SetAxisRange(0,EventRange*EventBin, "X");   //cut the X range so that reference plot and test run plot match.
 	  z_max = hRef->GetMaximum();
 	  z_min = hRef->GetMinimum();
@@ -875,6 +879,7 @@ int analyzer( const char* runFile ){
 	  c->cd(2);
 	  gPad->SetLogz(1);    //set log scale on z.
 	  hRef->SetAxisRange(z_min-1, z_max+1, "Z");
+	  hRef->SetAxisRange(0, EventRange*EventBin, "X");
 	  hRef->SetTitle("reference run");
 	  hRef->Draw("colz");
 	  c->Update();
@@ -1112,6 +1117,7 @@ int analyzer( const char* runFile ){
 		c->Draw();
 		TH1D* h_nwordPerSlot = hnwords->ProjectionY("",i,i);
 		h_nwordPerSlot->SetTitle(Form("nword distribution for slot %d; nwords;entries", firstFEM+i-1));
+	        h_nwordPerSlot->SetAxisRange(323000, 324000, "X");
 		h_nwordPerSlot->Draw("hist[");
 		c->Update();
 		TLine* l_max = new TLine(nword_Huff[0], gPad->GetUymin(), nword_Huff[0], gPad->GetUymax());
@@ -1268,7 +1274,7 @@ int analyzer( const char* runFile ){
 		gPad->SetLogy(1);
 		hFrameComp[i]->Draw("hist[");
 		c->Update();
-		c->Write(hFrameComp[i]->GetTitle());
+		c->Write(hFrameComp[i]->GetName());
 		c->Print(outPDFName.c_str());
 		delete hFrameComp[i];
 	  }
@@ -1464,7 +1470,7 @@ int analyzer( const char* runFile ){
 	 //trigger sample distribution for each slot
 	  for(int i=1; i<= NFEMs; i++){
 		TH1D* htriggersample_Projection = hTriggerSample->ProjectionY("", i,i);
-		htriggersample_Projection->SetTitle(Form("trigger sample distribution at slot %d; trigger sample: entries", firstFEM+i-1));
+		htriggersample_Projection->SetTitle(Form("trigger sample distribution at slot %d; trigger sample; entries", firstFEM+i-1));
 		c->Clear();
 		c->Draw();
 		htriggersample_Projection->Draw("hist[");
