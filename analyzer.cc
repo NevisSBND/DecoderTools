@@ -121,7 +121,7 @@ int analyzer( const char* runFile ){
    TH2D* hTriggerSamComp = new TH2D("hTriggerSamComp","Trigger sample difference between first slot and other slots within 1 event;Slot;trigger sample difference; entries", NFEMs-1, firstFEM+1, firstFEM+NFEMs,100,-500,500);
 
   //real-time trigger rate calculated from each slot.
-  TH2D *hFrameTrigger=new TH2D("hFrameTrigger", "Real-time triggerRate calculated by the frame difference; Slot; Trigger Rate; entries", NFEMs, firstFEM, firstFEM+NFEMs, (int)8*triggerRate, 0, 4*triggerRate);
+  TH2D *hFrameTrigger=new TH2D("hFrameTrigger", "Real-time triggerRate calculated by the frame difference; Slot; Trigger Rate; entries", NFEMs, firstFEM, firstFEM+NFEMs, (int)20*triggerRate, 0, 2*triggerRate);
   
 
   //simply the distribution of all the variables for difference FEMs.
@@ -1359,12 +1359,12 @@ int analyzer( const char* runFile ){
 	  gPad->SetLogz(1);
 	  if(hTTriggerRate->GetMaximum() > z_max) z_max=hTTriggerRate->GetMaximum();
 	  if(hTTriggerRate->GetMinimum() < z_min) z_min=hTTriggerRate->GetMinimum();
-	  hTTriggerRate->SetAxisRange(z_min, z_max+1, "Z");
+	  hTTriggerRate->SetAxisRange(z_min, z_max+10, "Z");
 	  hTTriggerRate->SetAxisRange(0, ceil(MAX_EVENT/triggerRate), "X");
 	  hTTriggerRate->Draw("colz");
 	  c->cd(2);
 	  gPad->SetLogz(1);
-	  hRef->SetAxisRange(z_min, z_max+1, "Z");
+	  hRef->SetAxisRange(z_min, z_max+10, "Z");
 	  hRef->SetTitle("reference run");
 	  hRef->Draw("colz");
 	  c->Update();
