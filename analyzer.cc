@@ -140,16 +140,24 @@ int analyzer( const char* runFile ){
   XMITInfo* xmitinfo = NULL;
   inTree->SetBranchAddress("xmitinfo", &xmitinfo);
 //  inTree->SetBranchAddress("waveform", &hwaveform);
-
+ 
+  
   int entries = inTree->GetEntries();
+  //get the last event from the run
+  inTree->GetEntry(entries-1);
+  FEMInfo feminfo_event = (*xmitinfo)[15];
+  double totEvent = (double)feminfo_event.event;
+  std::cout << " The last event is " << totEvent<<std::endl;
+
   if( entries < 2 ){
     std::cerr << "Analyzer needs more than one entry to compute time interval" << std::endl;
     exit(1);
   }
 
   //this should be change (Entries are the total number of events for the dissecter
-  //
-  double totEvent = entries; //calculate the total number events in the run based on entries
+  
+  
+  //double totEvent = entries; //calculate the total number events in the run based on entries
   int EventRange = ceil(totEvent/EventBin);  //calcualte num of bins needed for the "event" axis assuming using bin size 'EventBin'.
   std::cout << "There are total " << entries << " entries in the tree"<< std::endl;
   
@@ -266,10 +274,10 @@ int analyzer( const char* runFile ){
 	 // ref_checksum_channel = *pointer_checksum_channel;
   }
   // if it is a reference run, you don't need to use `ref_checksum_channel`, clear its memory and delete the pointer.
-  else {
-	delete pointer_checksum_channel;
-	std::vector<long int>().swap(ref_checksum_channel);
-  }
+ // else {
+//	delete pointer_checksum_channel;
+//	std::vector<long int>().swap(ref_checksum_channel);
+  //}
 
 
   //Loop over tree entries, (every entry is an event)
@@ -277,8 +285,9 @@ int analyzer( const char* runFile ){
   for (int ientry=0; ientry<inTree->GetEntries(); ientry++){
   //for( int i = 0; i < entries; i++ ){
     inTree->GetEntry(ientry);
-    std::cout << "XMIT packet " << ientry << " with " << xmitinfo->size() << " FEMs" << std::endl;
-
+    if ( xmitinfo->size() > 16 or xmitinfo->size()<16){
+      std::cout << "XMIT packet " << ientry << " with " << xmitinfo->size() << " FEMs" << std::endl;
+    }
    // uint32_t last_frame = 0;
     for (size_t ifem = 0; ifem < xmitinfo->size(); ifem++)
     {
@@ -305,7 +314,7 @@ int analyzer( const char* runFile ){
 	ROImean=feminfo.mean;
 	std::vector<double> ROInum ; 
 	ROInum =feminfo.roinum;
-        std::cout<< ROImean.size() << "ROIS Info" <<endl;    
+  //      std::cout<< ROImean.size() << "ROIS Info" <<endl;    
 //    if(event > MAX_EVENT) MAX_EVENT = event;
     if(ientry == entries-1) MAX_EVENT = event;
  
@@ -387,7 +396,7 @@ int analyzer( const char* runFile ){
 	//hTNumSample->Fill(event, channelnumber, samplenum);
 
     } //end of channel waveforms operation.
-    std::cout<< " End of channel operations" <<std::endl;
+    //std::cout<< " End of channel operations" <<std::endl;
     //fill in histos
     hSlot->Fill(slot, ifem+firstFEM);
 //    hSlot->Fill(slot,(i%NFEMs)+firstFEM);   //compare slot number with manually counted slot number.
@@ -429,7 +438,7 @@ int analyzer( const char* runFile ){
     hTdiff_checksum->Fill(event,slot, checksum - mychecksum);
     hbadFramecount->Fill(slot,badframecount);
     hTbadFramecount->Fill(event,slot,badframecount);
-    std::cout << "HELLO" <<std::endl;
+//    std::cout << "HELLO" <<std::endl;
 //    hTriggerFrame->Fill(slot,triggerframe);
 //    hTTriggerFrame->Fill(event,slot, triggerframe);
 //    hTriggerSample->Fill(slot, triggersample);
@@ -448,31 +457,31 @@ int analyzer( const char* runFile ){
  
    //comparison between two adjecent FEMs (peridically).
     int deltaFrame = frame - prev_frame[(ifem-1)];
-    std::cout << " Past delta frame " <<std::endl;
+//    std::cout << " Past delta frame " <<std::endl;
     hDeltaFrame->Fill(deltaFrame,slot);
     hTDeltaFrame->Fill(event,slot, deltaFrame);
     //if( deltaFrame != 0 ) totalTriggers++;
 
     int deltaEvent = event - prevEvent;
-    std::cout << deltaEvent << " NEW event" <<std::endl; 
+//    std::cout << deltaEvent << " NEW event" <<std::endl; 
     hDeltaEvent->Fill(slot,deltaEvent);
     hTDeltaEvent->Fill(event,slot, deltaEvent);
-    std::cout << deltaEvent << " deltaEvent " <<  prev_frame[0] << " " << frame<<std::endl;
+//    std::cout << deltaEvent << " deltaEvent " <<  prev_frame[0] << " " << frame<<std::endl;
     if(deltaEvent == 0){ //for entries in the same event
 	//if deltaEvent is 0 for the first FEM, something wrong must happen
 	if((ifem) == 0) std::cout<< "ERROR: the first physical slot doesn't start a new event" << std::endl;
 	//if this is not the first FEM.
-	else{
-		std::cout << ifem-1 << std::endl;
+	//else{
+	//	std::cout << ifem-1 << std::endl;
 	//	hFrameComp[(ifem-1)]->Fill(abs(prev_frame[0] - frame));
-	   	std::cout << " Filled fram comparison" << std::endl; 
+	  // 	std::cout << " Filled fram comparison" << std::endl; 
 		//hTriggerSamComp->Fill(slot, triggersample - TSample_firstSlot);
-	}
+	//}
     }
    // else if(slot == firstFEM) TSample_firstSlot=triggersample;
     else std::cout << "ERROR: new event start from a non-first slot!!" << std::endl;  
 
-    std::cout << deltaEvent << " Past delta event " <<std::endl;
+  //  std::cout << deltaEvent << " Past delta event " <<std::endl;
 
     //use Frame difference between this event and previous event to calculate the real-time trigger rate.
  //   if(prev_frame[ifem%NFEMs] > 0) hFrameTrigger->Fill(slot, 1/((frame-prev_frame[ifem%NFEMs])*framesize));
@@ -507,14 +516,14 @@ int analyzer( const char* runFile ){
 	//std::cin >> aux;
       }
     }
-    std::cout <<" check delta events "<<std::endl;
+//    std::cout <<" check delta events "<<std::endl;
 
     //update previous frame, event, and slot.
    // std::cout << 
     prev_frame[ifem%NFEMs]=frame;
     prevEvent = event;
     prevSlot = slot;
-    std::cout << " calculating last frame" <<std::endl;
+  //  std::cout << " calculating last frame" <<std::endl;
    }//end of loop over FEMs
 
   } // end of loop over N entries
@@ -2070,7 +2079,7 @@ int analyzer( const char* runFile ){
 	  c->Update();
 	  c->Write("cTROInum");
 	  c->Print(outPDFName.c_str());
-	  delete hNumSample; delete hTNumSample;
+	  delete hROInum; delete hTROInum;
 
 	  c->Print((outPDFName+"]").c_str());
 	  delete vRef;
