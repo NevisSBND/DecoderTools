@@ -103,7 +103,7 @@ int mode_finder(const char* runFile){
 }
 int analyzer( const char* runFile ){
 
-  bool is_reference = true;   //if this is for reference run or not.
+  bool is_reference = false;   //if this is for reference run or not.
 
   //not needed for SN stream
   int sample_size = 256;  //length of the fake waveform from the WIB
@@ -114,7 +114,7 @@ int analyzer( const char* runFile ){
   double framesize = frameLength*0.5e-6;  //the length of 1 frame (in second). The length of 1 tick is 0.5us.
   int NFEMs = 16; // number of FEMs
   int firstFEM = 3; // slot of the first FEM
-  int EventBin = 10;  //binning size of the time axis("Event" axis)
+  int EventBin = 500;  //binning size of the time axis("Event" axis)
 
   // Input ROOT file
   TFile inFile( runFile, "READ" );
@@ -200,14 +200,14 @@ int analyzer( const char* runFile ){
   TH2D *hEvents = new TH2D("hEvents", "Event numbers;Event number/10 events;Slot;Entries",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);  //largest event number is 16777215
   TH2D *hDeltaEvent = new TH2D("hDeltaEvent", "Event no. difference;Slot;#DeltaEvent;Entries",NFEMs, firstFEM, firstFEM+NFEMs, 5, 0, 5);
   TH2D *hChecksum = new TH2D("hChecksum", "checksum from readout FEM header words;Slot; checksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 16778, 0, 16778000);
-  TH2D *hdiff_checksum = new TH2D("hdiff_checksum", "checksum - mychecksum;Slot; checksum - mychecksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 20000,-20000,20000);
+  TH2D *hdiff_checksum = new TH2D("hdiff_checksum", "checksum - mychecksum;Slot; checksum - mychecksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 20000,-40000,40000);
   TH2D *hMychecksum = new TH2D("hMychecksum", "checksum counted manually; Slot; Mychecksum; entries", NFEMs, firstFEM, firstFEM+NFEMs, 16778, 0, 16778000);
   TH2D *hbadFramecount = new TH2D("hbadFramecount", "Number of bad frames; Slot; Bad Frame Count; entries", NFEMs, firstFEM, firstFEM+NFEMs, 1000,0,4000); 
 //  TH2D *hNumSample = new TH2D("hNumSample", "Number of samples in waveform  per channel; channel number; number of samples; entries", NFEMs*64,0,NFEMs*64, 1000,0,10000);
   TH2D *hMean = new TH2D("hMean", "Mean value of waveform per channel; channel number; mean value of waveform; entries", NFEMs*64,0,NFEMs*64, 1000,0,5000);
   TH2D *hRMS = new TH2D("hRMS", "RMS value of waveform per channel; channel number; RMS value; entries", NFEMs*64,0,NFEMs*64, 1000,0,5000);
   TH2D *hMax = new TH2D("hMax", "Max value of waveform per channel; channel number; Max value; entries",NFEMs*64,0,NFEMs*64, 1000,0,5000);
-  TH2D *hMin = new TH2D("hMin", "Min value of waveform per channel; channel number; Min value; entries", NFEMs*64,0,NFEMs*64, 10001,-2,5000);
+  TH2D *hMin = new TH2D("hMin", "Min value of waveform per channel; channel number; Min value; entries", NFEMs*64,0,NFEMs*64, 1003,-6,5000);
   TH2D *hROInum = new TH2D("hROInum"," Number of ROI per channel; channel number; ROI number; entries", NFEMs*64,0,NFEMs*64, 200,0,200); 
   // how those variables changes with time for each FEM or channel.
    TH2C *hTSlot = new TH2C("hTSlot", "2D plot of Slot number changing with time(Event number); Event number/10 events;Manually counted Slot number; Slot", EventRange,0, EventRange*EventBin,  NFEMs, firstFEM, firstFEM+NFEMs);
@@ -226,7 +226,7 @@ int analyzer( const char* runFile ){
    TH2D *hTChecksum = new TH2D("hTChecksum", "2D plot of checksum vs. time (Event number);Event number/10 events;Slot;Checksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
    TH2D *hTMychecksum = new TH2D("hTMychecksum", "2D plot of manually counted checksum vs. time(Event number);Event number/10 events;Slot; mychecksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
    TH2D *hTdiff_checksum = new TH2D("hTdiff_checksum", "2D plot of (checksum - mychecksum) vs. time(Event number);Event number/10 events;Slot;checksum - mychecksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   hTdiff_checksum->SetAxisRange(-20000*EventBin, 20000*EventBin, "Z"); 
+   hTdiff_checksum->SetAxisRange(-40000*EventBin, 40000*EventBin, "Z"); 
    TH2D *hTbadFramecount = new TH2D("hTbadFramecount","2D plot of bad frame count vs. time (Event number); Event number/100 events;Slot; bad frame count", EventRange,0,EventRange*EventBin,NFEMs, firstFEM, firstFEM+NFEMs);
    TH2D *hTMean = new TH2D("hTMean", "Mean value of waveform per channel vs. time;Event number/10 events;channel number; Mean value",EventRange,0, EventRange*EventBin, NFEMs*64, 0, NFEMs*64);
    TH2D *hTMax = new TH2D("hTMax", "Max value of waveform per channel vs. time;Event number/10 events;channel number; Max value",EventRange,0, EventRange*EventBin, NFEMs*64, 0, NFEMs*64);
@@ -234,17 +234,17 @@ int analyzer( const char* runFile ){
    TH2D *hTRMS = new TH2D("hTRMS", "RMS value of waveform per channel vs. time;Event number/10 events;channel number;RMS value",EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
    TH2D *hTROInum = new TH2D("hTROInum","Number of ROI per channel vs. time; Event number/100 events;channel number; Number of ROIs; entries", EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
   //nwords under Huffman compression for 64 channels (for plotting).
-   std::vector<long int> nword_channel_Huff_max(64,0);
-   std::vector<long int> nword_channel_Huff_min(64,0);
-   std::vector<long int> nword_slot(2,0);  //max nword and min nword for 1 slot. max->0 index, min:1 index.
-   std::vector<long int> checksum_channel(64,0); //checksum of 256 samples in 64 channels
-   if(!is_reference){
+  // std::vector<long int> nword_channel_Huff_max(64,0);
+  // std::vector<long int> nword_channel_Huff_min(64,0);
+  // std::vector<long int> nword_slot(2,0);  //max nword and min nword for 1 slot. max->0 index, min:1 index.
+  //std::vector<long int> checksum_channel(64,0); //checksum of 256 samples in 64 channels
+  // if(!is_reference){
 	//if it's not a reference run, delete the memory
-	std::vector<long int>().swap(nword_channel_Huff_max);
-	std::vector<long int>().swap(nword_channel_Huff_min);
-	std::vector<long int>().swap(nword_slot); 
-	std::vector<long int>().swap(checksum_channel);
-   }
+//	std::vector<long int>().swap(nword_channel_Huff_max);
+//	std::vector<long int>().swap(nword_channel_Huff_min);
+//	std::vector<long int>().swap(nword_slot); 
+//	std::vector<long int>().swap(checksum_channel);
+//   }
    std::cout << "HISTOGRAMS ARE SUCCESSFULLY GENERATED" <<std::endl; 
 
   double prevEvent = -999;
@@ -263,7 +263,11 @@ int analyzer( const char* runFile ){
   
   //if it's not a reference run, open the reference file.
   if(!is_reference){
-	  refFile = new TFile("output_ref.root", "READ" );
+ 	   //static baseline
+	  refFile = new TFile("/a/data/bleeker/sbnd/runs/Run20190805102202/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_correct_ana.root","READ");
+	  //dynamic baseline
+	//  refFile = new TFile("/a/data/bleeker/sbnd/Run20190716101155/Run20190716101155/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_ana.root","READ");
+//	  refFile = new TFile("output_ref.root", "READ" );
 	  if( !refFile->IsOpen() ){
 	    std::cerr << "Unable to open the reference root file: output_NevisTPCNUXMIT_generator_ref.root" << std::endl;
 	    exit(1);
@@ -282,12 +286,13 @@ int analyzer( const char* runFile ){
 
   //Loop over tree entries, (every entry is an event)
   // Loop over entries, 1 entry is for 1 FEM
-  for (int ientry=0; ientry<inTree->GetEntries(); ientry++){
+   //for (int ientry =2; ientry< 20; ientry++){	
+  for (int ientry=2; ientry<inTree->GetEntries(); ientry++){
   //for( int i = 0; i < entries; i++ ){
     inTree->GetEntry(ientry);
-    if ( xmitinfo->size() > 16 or xmitinfo->size()<16){
-      std::cout << "XMIT packet " << ientry << " with " << xmitinfo->size() << " FEMs" << std::endl;
-    }
+ //   if ( xmitinfo->size() > 16 or xmitinfo->size()<16){
+   //   std::cout << "XMIT packet " << ientry << " with " << xmitinfo->size() << " FEMs" << std::endl;
+   // }
    // uint32_t last_frame = 0;
     for (size_t ifem = 0; ifem < xmitinfo->size(); ifem++)
     {
@@ -418,19 +423,19 @@ int analyzer( const char* runFile ){
     hEvents->Fill(event,slot);
     hTEvents->Fill( event,slot,event);
     hChecksum->Fill(slot,checksum);
-    hId->Fill(slot,id);
-    hTId->Fill(event,slot, id);
-    hnwords->Fill(slot,nwords);
-    hTnwords->Fill(event,slot, nwords);
-    hwordcount->Fill(slot,wordcount);
-    hTwordcount->Fill(event,slot, wordcount);
-    hdiff_nword->Fill(slot,nwords-wordcount);
-    hTdiff_nword->Fill( event,slot, nwords - wordcount);
-    hFrames->Fill(frame,slot);
-    hTFrames->Fill(event,slot, frame);
-    hEvents->Fill(event,slot);
-    hTEvents->Fill( event,slot,event);
-    hChecksum->Fill(slot,checksum);
+   // hId->Fill(slot,id);
+   // hTId->Fill(event,slot, id);
+   // hnwords->Fill(slot,nwords);
+   // hTnwords->Fill(event,slot, nwords);
+   // hwordcount->Fill(slot,wordcount);
+   // hTwordcount->Fill(event,slot, wordcount);
+   // hdiff_nword->Fill(slot,nwords-wordcount);
+    //hTdiff_nword->Fill( event,slot, nwords - wordcount);
+    //hFrames->Fill(frame,slot);
+    //hTFrames->Fill(event,slot, frame);
+    //hEvents->Fill(event,slot);
+    //hTEvents->Fill( event,slot,event);
+    //hChecksum->Fill(slot,checksum);
     hTChecksum->Fill(event,slot, checksum);
     hMychecksum->Fill(slot,mychecksum);
     hTMychecksum->Fill( event,slot, mychecksum);
@@ -453,7 +458,7 @@ int analyzer( const char* runFile ){
 	//TSample_firstSlot=triggersample;
 	continue;	
     } 
-    std::cout << " Past firts  previous frame " << std::endl; 
+  //  std::cout << " Past firts  previous frame " << std::endl; 
  
    //comparison between two adjecent FEMs (peridically).
     int deltaFrame = frame - prev_frame[(ifem-1)];
@@ -563,7 +568,7 @@ int analyzer( const char* runFile ){
 	//  rootFile.WriteObject(&nword_slot, "nword_slot");  //write this vector to output file.
 
 	  //write the checksum of certain number of ADC words for every channel (64 channels) 
-	  rootFile.WriteObject(&checksum_channel, "checksum_channel");
+	  //rootFile.WriteObject(&checksum_channel, "checksum_channel");
 
 	  //write plots into file.
 	  hSlot->Write();
@@ -594,6 +599,8 @@ int analyzer( const char* runFile ){
 	  hTdiff_checksum->Write();
 	  hMychecksum->Write();
 	  hTMychecksum->Write();
+	  hbadFramecount->Write();
+	  hTbadFramecount->Write();
 	  //hTriggerFrame->Write();
 	  //hTTriggerFrame->Write();
 	  //hTriggerSample->Write();
@@ -609,6 +616,8 @@ int analyzer( const char* runFile ){
 	  hTMax->Write();
 	  hMin->Write();
 	  hTMin->Write();
+	  hROInum->Write();
+	  hTROInum->Write();
 	  //hTTriggerRate->Write();
 	  //hFrameTrigger->Write();
 	  gROOT->SetBatch(kTRUE);
@@ -793,18 +802,19 @@ int analyzer( const char* runFile ){
 	  hTMychecksum->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout << " MyChecksum" << std::endl;
 	  delete hTMychecksum;
 	  c->Clear();
 	  c->Draw();
 	  hbadFramecount->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout << "hbadFramecount" << std::endl;
 	  delete hbadFramecount;
-	  c->Clear();
-	  c->Draw();
 	  hTbadFramecount->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout << "hTbadFramecount" <<std::endl;
 	  delete hTbadFramecount;
 	  c->Clear();
 	  c->Draw();
@@ -847,24 +857,28 @@ int analyzer( const char* runFile ){
 	  hMean->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout << "hMean" <<std::endl;
 	  delete hMean;
 	  c->Clear();
 	  c->Draw();
 	  hTMean->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout <<"hTmean"<<std::endl;
 	  delete hTMean;
 	  c->Clear();
 	  c->Draw();
 	  hRMS->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout<<"hRMS" <<std::endl;
 	  delete hRMS;
 	  c->Clear();
 	  c->Draw();
 	  hTRMS->Draw("colz");
 	  c->Update();
 	  c->Print(".pdf");
+	  std::cout<<"hTRMS" <<std::endl;
 	  delete hTRMS;
 	  c->Clear();
 	  c->Draw();
@@ -900,8 +914,10 @@ int analyzer( const char* runFile ){
 	  c->Draw();
 	  hTROInum->Draw("colz");
 	  c->Update();
-	  c->Print(".pdf]");
+	  c->Print(".pdf");
 	  delete hTROInum;
+	  c->Print(".pdf]");
+	  
 	  //hTTriggerRate->Draw("colz");
 	  //c->Update();
 	  //c->Print(".pdf");
@@ -1854,10 +1870,13 @@ int analyzer( const char* runFile ){
           c->Update();
           c->Write("cTbadFrameCount");
           c->Print(outPDFName.c_str());
-          delete hMychecksum; delete hTMychecksum;
+          delete hbadFramecount; delete hTbadFramecount;
 
 	  hRef=(TH2D*)refFile->Get("hRMS");
+	  std::cout << " GOT hRMS" << std::endl;
 	  hTRef=(TH2D*)refFile->Get("hTRMS");
+	  std::cout << " GOT hTRMS" << std::endl;
+	  std::cout << " TRIAL RMS " << hRMS->GetEntries() << std::endl;  
 	  hRef->Scale(MAX_EVENT/ref_event); //scale the reference plots with the same total number of events
 	  hTRef->SetAxisRange(0,EventRange*EventBin, "X");   //cut the X range so that reference plot and test run plot match.
 	  z_max = hRef->GetMaximum();
@@ -1942,7 +1961,7 @@ int analyzer( const char* runFile ){
 	  hTRef->Draw("colz");
 	  c->Update();
 	  c->Write("cTMax");
-	  c->Print(outPDFName.c_str());
+	//  c->Print(outPDFName.c_str());
 	  delete hMax; delete hTMax;
 
 
@@ -2067,6 +2086,7 @@ int analyzer( const char* runFile ){
 	  c->Divide(1,2);
 	  c->cd(1);
 	  gPad->SetLogz(1);
+	  std::cout << " TRY THIS out again" <<hTROInum->GetEntries() <<std::endl;
 	  if(hTROInum->GetMaximum() > z_maxT) z_maxT=hTROInum->GetMaximum();
 	  if(hTROInum->GetMinimum() < z_minT) z_minT=hTROInum->GetMinimum();
 	  hTROInum->SetAxisRange(z_minT-1, z_maxT+1, "Z");
