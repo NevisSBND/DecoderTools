@@ -9,3 +9,5 @@ echo -e "Compiling channel_mapper.cc\n"
 g++ decoder_dict.cc channel_mapper.cc -Wall -o channel_mapper.exe `root-config --cflags  --glibs`
 echo -e "Compiling analyzer.cc\n"
 g++ decoder_dict.cc analyzer.cc -Wall -o analyzer.exe `root-config --cflags  --glibs`
+echo -e "Compiling comparison.cc\n"
+g++ decoder_dict.cc comparison.cc -Wall -o comparison.exe `root-config --cflags  --glibs`

@@ -1,6 +1,8 @@
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <fstream>
+#include <string>
 #include <vector>
 
 #include <TROOT.h>
@@ -46,6 +48,8 @@ int decode_huffman( int zeros ){
 //int main( int argc, char** argv ){
 int decoder( const char* argv ){
   //  std::string inFileName = argv[1];
+  
+
   std::string inFileName(argv);
 
   std::ifstream binFile;
@@ -55,8 +59,6 @@ int decoder( const char* argv ){
     return 0;
   }
 
-  std::string outFileName = inFileName.substr(0, inFileName.find_last_of(".")) + ".root";
-  TFile rootFile( outFileName.c_str(), "RECREATE" );
 
   // Header information
   HeaderInfo header;
@@ -66,15 +68,72 @@ int decoder( const char* argv ){
   size_t currentChannel = 999;
   std::vector<uint16_t> currentWaveform;
 
+  int entry = 0;
+  bool is_new = true; //a bool value for: if the file is newly made
+  int n_file = 0; //the sequence number of the output file generated.
+  int event_per_file = 30; //total number of events per output file.
+  int event_track = 0;  //track the number of events saved in input file.
+
+
+  std::stringstream ss; //to get a string with fixed length
+  ss << std::setw(2) << std::setfill('0') << n_file;  
+  std::string outFileName = inFileName.substr(0, inFileName.find_last_of(".")) + "_condor" + ss.str() + ".root";
+  ss.str("");   //clear the content of stringstream
+  ss.clear();   //clear any fail or eof flag.
+
+  //create TTree which don't belong to any directory, in order to split info into multiple output file. 
   TTree* outTree = new TTree("decoderTree", "Decoder output tree");
   outTree->Branch("header", &header );
   outTree->Branch("waveform", &waveform );
 
-  int entry = 0;
+  std::cout << "Creating output root file " << n_file << std::endl;
+  TFile* rootFile=new TFile( outFileName.c_str(), "RECREATE" );
+  outTree->SetDirectory(rootFile);   // set the directory of TTree.
+
+
   while( binFile.peek() != EOF ){
     uint32_t word32b;
     binFile.read( reinterpret_cast<char*>(&word32b), sizeof(word32b) );
     if( (word32b == 0xFFFFFFFF) || (word32b == 0xE0000000) ){ // Temporary: ignore XMIT words
+      //create new files if there is enough events in previous file
+      if((word32b == 0xFFFFFFFF) && ((event_track%event_per_file) == 0)){
+ 	if(n_file == 0) n_file++;  
+	else{//save the last entry from last event into file generated before and close it.
+	        header.wordcount = (header.wordcount & 0xFFFFFF);
+	        int32_t nwords_diff = header.nwords - header.wordcount;
+	        if( nwords_diff != 0 ) std::cerr << "WARNING: Word count difference: " << nwords_diff << std::endl;
+	        header.mychecksum = (header.mychecksum & 0xFFFFFF);
+	        uint32_t checksum_diff = header.checksum - header.mychecksum;
+	        if( checksum_diff != 0 ) std::cerr << "WARNING: Checksum difference: " << checksum_diff << std::endl;
+	        outTree->Fill();
+	        std::cout << "Entry " << entry << " written to TTree" <<  std::endl;
+		rootFile->Write();
+
+		outTree->SetDirectory(0);  //change the directory of TTree before closing the file.
+		std::cout << "Closing output file " << n_file-1 << std::endl;
+		rootFile->Close();
+		
+
+		//create new output file.
+		ss << std::setw(2) << std::setfill('0') << n_file;  
+		outFileName.assign(inFileName.substr(0, inFileName.find_last_of(".")) + "_condor" + ss.str() + ".root");
+		ss.str("");
+		ss.clear();
+		rootFile=new TFile( outFileName.c_str(), "RECREATE" );
+		if(rootFile->IsOpen()) std::cout << "Creating output root file " << n_file << std::endl;
+		else std::cout << "Couldn't create root file" << n_file << std::endl;
+		//std::cout << "pointer of the newly opened root file is " << rootFile <<std::endl; 
+		outTree->Reset();  //reset the buffer of the branches.
+		outTree->SetDirectory(rootFile);
+		//TTree* outTree = new TTree("decoderTree", "Decoder output tree");
+		//outTree->Branch("header", &header );
+		//outTree->Branch("waveform", &waveform );
+		is_new = true;  // new file again.
+		n_file ++;
+	}
+      }
+      if(word32b == 0xE0000000) event_track++;  //add 1 event when event tailer is seen.
+ 
       std::cout << std::setfill('0');
       std::cout << "INFO: XMIT word " << std::hex << std::setw(8) << word32b << " found and ignored" <<  std::endl;
       std::cout << std::dec; // revert to decimal
@@ -90,7 +149,7 @@ int decoder( const char* argv ){
       switch( get_word_type( word ) ){
       case kHeaderFirst:
 	type = "Header First";
-	if(entry > 0){
+	if(!is_new){   //gonna need a bool //if it's the beginning of a new file.
 	  // The beginning of a new entry triggers the filling of the last one
 	  header.wordcount = (header.wordcount & 0xFFFFFF);
 	  int32_t nwords_diff = header.nwords - header.wordcount;
@@ -107,6 +166,7 @@ int decoder( const char* argv ){
 	  waveform[ch].clear();
 	}
 	entry++;
+	if(is_new) is_new = false;
 	std::cout << "Beginning to process entry " << entry << std::endl;
 	break;
       case kHeaderIDSlot:
@@ -134,6 +194,7 @@ int decoder( const char* argv ){
 	type = "Header Event LSB";
 	header.event += (word & 0xFFF);
 	std::cout << "Event " << (int)header.event << std::endl;
+	std::cout << "Event counter " << event_track+1 << std::endl;
 	break;
       case kHeaderFrameMSB:
 	type = "Header Frame MSB";
@@ -223,17 +284,19 @@ int decoder( const char* argv ){
     } // end of loop over 2 words
   } // end of reading the file
   // Write the last entry (might be incomplete)
-  header.wordcount = (header.wordcount & 0xFFFFFF);
-  int32_t nwords_diff = header.nwords - header.wordcount;
-  if( nwords_diff != 0 ) std::cerr << "WARNING: Word count difference: " << nwords_diff << std::endl;
-  header.mychecksum = (header.mychecksum & 0xFFFFFF);
-  uint32_t checksum_diff = header.checksum - header.mychecksum;
-  if( checksum_diff != 0 ) std::cerr << "WARNING: Checksum difference: " << checksum_diff << std::endl;
-  outTree->Fill();
-
+  if(!is_new){
+	  header.wordcount = (header.wordcount & 0xFFFFFF);
+	  int32_t nwords_diff = header.nwords - header.wordcount;
+	  if( nwords_diff != 0 ) std::cerr << "WARNING: Word count difference: " << nwords_diff << std::endl;
+	  header.mychecksum = (header.mychecksum & 0xFFFFFF);
+	  uint32_t checksum_diff = header.checksum - header.mychecksum;
+	  if( checksum_diff != 0 ) std::cerr << "WARNING: Checksum difference: " << checksum_diff << std::endl;
+	  outTree->Fill();
+  }
   binFile.close();
   outTree->Write();
-  rootFile.Close();
+  delete outTree;
+  rootFile->Close();
   return 1;
 }
 
