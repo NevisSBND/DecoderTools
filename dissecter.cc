@@ -374,13 +374,13 @@ int dissecter( const char* argv ){
       headerCompleted = false;
       femcount = 0;
       xmitpacket++;
-      //std::cout << "XMIT packet " << xmitpacket <<std::endl;
-     // if (xmitpacket > 6){
- //	 binFile.close();
-  //	 outTree->Write();
-//	 rootFile.Close();
-//	 return 0;
-  //    }
+    //  std::cout << "XMIT packet " << xmitpacket <<std::endl;
+      if (xmitpacket >56 ){
+ 	 binFile.close();
+  	 outTree->Write();
+	 rootFile.Close();
+	 return 0;
+      }
 
       if( verbose ) std::cout << "Beginning to process XMIT packet " << xmitpacket << std::endl;
 
@@ -415,6 +415,7 @@ int dissecter( const char* argv ){
       uint16_t last16b = (word32b>>16) & 0xFFFF;
       uint16_t words16b[2] = {first16b, last16b};
 
+      if (xmitpacket ==1 ) continue;
       for(size_t i = 0; i < 2; i++){
 	uint16_t word = words16b[i];
 	add_to_fifo( fifo, word );
@@ -482,7 +483,7 @@ int dissecter( const char* argv ){
 	    feminfo.test = ((word>>9) & 0x1);
 	    feminfo.overflow = ((word>>10) & 0x1);
 	    feminfo.full = ((word>>11) & 0x1);
-	
+	    std::cout << " Slot " << feminfo.slot << std::endl;
 	    if (feminfo.full ==1){
 	  	binFile.close();
   		outTree->Write();
@@ -703,7 +704,9 @@ int dissecter( const char* argv ){
 	    if( verbose ) std::cout << "WARNING: Frame LSBs from FEM Channel Header do not match the FEM Header Frame. Data is corrupt!" << std::endl;
 	    feminfo.badframecount++;
 	  }
-
+	  if (feminfo.badframecount != 0){
+	    std::cout << "Bad Frame Count channel " << currentChannel << std::endl;
+	  }
 	  if( (prev_word != kFEMChannelHeader) && (prev_word != kFEMADCTailer) && (prev_word != kFEMHeaderSampleLSB) ){
 	    if( verbose ) std::cout << "Format violation: current word " << word_type_to_string( femword )
 				    << " preceded by " << word_type_to_string( prev_word ) << std::endl;
@@ -733,7 +736,10 @@ int dissecter( const char* argv ){
 	  feminfo.wordcount++;
 	  feminfo.mychecksum += word;
 	  currentROI.push_back((word & 0xFFF) );
-	  //std::cout << currentChannel << " ADC " << (word & 0xFFF) <<std::endl; 
+	  if(feminfo.badframecount !=0){
+	     std::cout << currentChannel << " ADC " << (word & 0xFFF) <<std::endl; 
+	  }
+//	  std::cout << currentChannel << " ADC " << (word & 0xFFF) <<std::endl; 
 //	  std::cout << currentROI.size() << " kFEMADC  added to ROI, current channel " << currentChannel << std::endl;
 	  if( (prev_word != kFEMADC) && (prev_word != kFEMADCHuffman) && (prev_word != kFEMTimeHeader) ){
 	    if( verbose ){
@@ -772,7 +778,9 @@ int dissecter( const char* argv ){
 	  //Difference are time-ordered from right to left
 	  for(size_t i = differences.size(); i>0; i--)
 	  {
-	   //   std::cout << currentChannel << " ADC " << currentROI.back() + differences[i -1] <<std::endl;
+	     if(feminfo.badframecount !=0){
+   	       std::cout << currentChannel << " ADC " << currentROI.back() + differences[i -1] <<std::endl;
+	     }
 	     currentROI.push_back(currentROI.back() + differences[i -1] );
 	  } 
 //	  std::cout << currentROI.size() << " after Huffman compress ROI" <<std::endl; 
@@ -792,7 +800,12 @@ int dissecter( const char* argv ){
 	  feminfo.wordcount++;
 	  feminfo.mychecksum += word;
 	  currentROI.push_back((word & 0xFFF) );
-	 //  std::cout << currentChannel << " ADC " << (word & 0xFFF) <<std::endl;
+	  if(feminfo.badframecount !=0){
+             std::cout << currentChannel << " ADC " << (word & 0xFFF) <<std::endl;
+	     std::cout << " " << std::endl;
+          }
+//	   std::cout << currentChannel << " ADC " << (word & 0xFFF) <<std::endl;
+//	  std::cout << " " <<std::endl;
 //	  std::cout << currentChannel << " kADCTailer currentChannel " << std::endl;	  
 
 	  if( (prev_word != kFEMADCHuffman) && (prev_word != kFEMADC) ){

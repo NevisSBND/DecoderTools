@@ -114,8 +114,8 @@ int analyzer( const char* runFile ){
   double framesize = frameLength*0.5e-6;  //the length of 1 frame (in second). The length of 1 tick is 0.5us.
   int NFEMs = 16; // number of FEMs
   int firstFEM = 3; // slot of the first FEM
-  int EventBin = 500;  //binning size of the time axis("Event" axis)
-
+  //int EventBin = 500;  //binning size of the time axis("Event" axis)
+  int EventBin = 1;
   // Input ROOT file
   TFile inFile( runFile, "READ" );
   if( !inFile.IsOpen() ){
@@ -144,8 +144,9 @@ int analyzer( const char* runFile ){
   
   int entries = inTree->GetEntries();
   //get the last event from the run
+  //inTree->GetEntry(149);
   inTree->GetEntry(entries-1);
-  FEMInfo feminfo_event = (*xmitinfo)[15];
+  FEMInfo feminfo_event = (*xmitinfo)[ xmitinfo->size()-1];
   double totEvent = (double)feminfo_event.event;
   std::cout << " The last event is " << totEvent<<std::endl;
 
@@ -160,7 +161,7 @@ int analyzer( const char* runFile ){
   //double totEvent = entries; //calculate the total number events in the run based on entries
   int EventRange = ceil(totEvent/EventBin);  //calcualte num of bins needed for the "event" axis assuming using bin size 'EventBin'.
   std::cout << "There are total " << entries << " entries in the tree"<< std::endl;
-  
+  std::cout << "The XBin are " << EventRange << std::endl;  
 
   std::string outFileName(runFile);
   //std::string outFileName = "tryanalyzer_ana.root";
@@ -193,12 +194,12 @@ int analyzer( const char* runFile ){
   TH2D *hId = new TH2D("hId", "ID; Slot;ID; Entries", NFEMs, firstFEM, firstFEM+NFEMs,127,0,127);
   TH2D *hnwords = new TH2D("hnwords", "distribution of number of words; Slot; number of words; entries",NFEMs, firstFEM, firstFEM+NFEMs,1000, 0,5000);
   TH2D *hwordcount = new TH2D("hwordcount", "distribution of manually counted number of words;Slot; wordcount; entries",NFEMs, firstFEM, firstFEM+NFEMs, 1000, 0, 5000);
-  TH2D *hdiff_nword = new TH2D("hdiff_nword", "number of words - wordcount;Slot; number of words - wordcount; entries", NFEMs, firstFEM, firstFEM+NFEMs,20,-10,10);
+  TH2D *hdiff_nword = new TH2D("hdiff_nword", "number of words - wordcount;Slot; number of words - wordcount; entries", NFEMs, firstFEM, firstFEM+NFEMs,2000,-4000,4000);
   TH2D *hFrames = new TH2D("hFrames", "Frame numbers;Frame/1000;Slot;Entries",16778, 0, 16778000, NFEMs, firstFEM, firstFEM+NFEMs);   //largest frame number is 16777215
  //hFrames->SetDirectory(gROOT);  
-  TH2D *hDeltaFrame = new TH2D("hDeltaFrame", "Frame difference;#DeltaFrame;Slot;Entries", 2000, 0, 2000, NFEMs, firstFEM, firstFEM+NFEMs);
-  TH2D *hEvents = new TH2D("hEvents", "Event numbers;Event number/10 events;Slot;Entries",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);  //largest event number is 16777215
-  TH2D *hDeltaEvent = new TH2D("hDeltaEvent", "Event no. difference;Slot;#DeltaEvent;Entries",NFEMs, firstFEM, firstFEM+NFEMs, 5, 0, 5);
+  TH2D *hDeltaFrame = new TH2D("hDeltaFrame", "Frame difference;#DeltaFrame;Slot;Entries", 200, 0, 200, NFEMs, firstFEM, firstFEM+NFEMs);
+  TH2D *hEvents = new TH2D("hEvents", "Event numbers;Event number/500 events;Slot;Entries",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);  //largest event number is 16777215
+  TH2D *hDeltaEvent = new TH2D("hDeltaEvent", "Event no. difference;Slot;#DeltaEvent;Entries",NFEMs, firstFEM, firstFEM+NFEMs, 200, 0, 200);
   TH2D *hChecksum = new TH2D("hChecksum", "checksum from readout FEM header words;Slot; checksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 16778, 0, 16778000);
   TH2D *hdiff_checksum = new TH2D("hdiff_checksum", "checksum - mychecksum;Slot; checksum - mychecksum; entries",NFEMs, firstFEM, firstFEM+NFEMs, 20000,-40000,40000);
   TH2D *hMychecksum = new TH2D("hMychecksum", "checksum counted manually; Slot; Mychecksum; entries", NFEMs, firstFEM, firstFEM+NFEMs, 16778, 0, 16778000);
@@ -210,29 +211,29 @@ int analyzer( const char* runFile ){
   TH2D *hMin = new TH2D("hMin", "Min value of waveform per channel; channel number; Min value; entries", NFEMs*64,0,NFEMs*64, 1003,-6,5000);
   TH2D *hROInum = new TH2D("hROInum"," Number of ROI per channel; channel number; ROI number; entries", NFEMs*64,0,NFEMs*64, 200,0,200); 
   // how those variables changes with time for each FEM or channel.
-   TH2C *hTSlot = new TH2C("hTSlot", "2D plot of Slot number changing with time(Event number); Event number/10 events;Manually counted Slot number; Slot", EventRange,0, EventRange*EventBin,  NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2C *hTOverflow = new TH2C("hTOverflow", "2D plot of overflow vs time(Event number);Event number/10 events; Slot;Overflow",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);    //maximum event number: 16778000
-   TH2C *hTFull = new TH2C("hTFull", "2D plot of Full flag vs. time(Event number); Event number/10 events;Slot; Full flag", EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2C *hTId = new TH2C("hTId", "2D plot of FEM id vs. time (Event number);Event number/10 events;Slot; FEM ID",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTnwords = new TH2D("hTnwords", "2D plot of nwords vs. time(Event number); Event number/10 events;Slot; nwords",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTwordcount = new TH2D("hTwordcount", "2D plot of wordcount vs. time(Event number);Event number/10 events;Slot; wordcount",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTdiff_nword = new TH2D("hTdiff_nword", "2D plot of (nwords - wordcount) vs. time (Event number);Event number/10 events;Slot; nwords - wordcount", EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   hTdiff_nword->SetAxisRange(-10*EventBin, 10*EventBin, "Z");
-   TH2D *hTFrames = new TH2D("hTFrames", "2D plot of event frame number vs. time (Event number); Event number/10 events;Slot; Frame number",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTDeltaFrame = new TH2D("hTDeltaFrame", "2D plot of Frame difference;Event number/10 events;Slot; Frame difference", EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2C *hTSlot = new TH2C("hTSlot", "2D plot of Slot number changing with time(Event number); Event number/5000 events;Manually counted Slot number; Slot", EventRange,0, EventRange*EventBin,  NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2C *hTOverflow = new TH2C("hTOverflow", "2D plot of overflow vs time(Event number);Event number/500 events; Slot;Overflow",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);    //maximum event number: 16778000
+   TH2C *hTFull = new TH2C("hTFull", "2D plot of Full flag vs. time(Event number); Event number/500 events;Slot; Full flag", EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2C *hTId = new TH2C("hTId", "2D plot of FEM id vs. time (Event number);Event number/500 events;Slot; FEM ID",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTnwords = new TH2D("hTnwords", "2D plot of nwords vs. time(Event number); Event number/500 events;Slot; nwords",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTwordcount = new TH2D("hTwordcount", "2D plot of wordcount vs. time(Event number);Event number/500 events;Slot; wordcount",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTdiff_nword = new TH2D("hTdiff_nword", "2D plot of (nwords - wordcount) vs. time (Event number);Event number/500 events;Slot; nwords - wordcount", EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   hTdiff_nword->SetAxisRange(-4000*EventBin, 4000*EventBin, "Z");
+   TH2D *hTFrames = new TH2D("hTFrames", "2D plot of event frame number vs. time (Event number); Event number/5000 events;Slot; Frame number",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTDeltaFrame = new TH2D("hTDeltaFrame", "2D plot of Frame difference;Event number/500 events;Slot; Frame difference", EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
    hTDeltaFrame->SetMinimum(1);
-   TH2D *hTEvents = new TH2D("hTEvents", "2D plot of Event number vs. time(Event number);Event number/10 events;Slot; Event number",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTDeltaEvent = new TH2D("hTDeltaEvent", "2D plot of Event no. difference vs. time (Event number);Event number/10 events;Slot; Event difference",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs); 
-   TH2D *hTChecksum = new TH2D("hTChecksum", "2D plot of checksum vs. time (Event number);Event number/10 events;Slot;Checksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTMychecksum = new TH2D("hTMychecksum", "2D plot of manually counted checksum vs. time(Event number);Event number/10 events;Slot; mychecksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTdiff_checksum = new TH2D("hTdiff_checksum", "2D plot of (checksum - mychecksum) vs. time(Event number);Event number/10 events;Slot;checksum - mychecksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTEvents = new TH2D("hTEvents", "2D plot of Event number vs. time(Event number);Event number/500 events;Slot; Event number",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTDeltaEvent = new TH2D("hTDeltaEvent", "2D plot of Event no. difference vs. time (Event number);Event number/500 events;Slot; Event difference",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs); 
+   TH2D *hTChecksum = new TH2D("hTChecksum", "2D plot of checksum vs. time (Event number);Event number/500 events;Slot;Checksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTMychecksum = new TH2D("hTMychecksum", "2D plot of manually counted checksum vs. time(Event number);Event number/500 events;Slot; mychecksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTdiff_checksum = new TH2D("hTdiff_checksum", "2D plot of (checksum - mychecksum) vs. time(Event number);Event number/500 events;Slot;checksum - mychecksum",EventRange,0, EventRange*EventBin, NFEMs, firstFEM, firstFEM+NFEMs);
    hTdiff_checksum->SetAxisRange(-40000*EventBin, 40000*EventBin, "Z"); 
-   TH2D *hTbadFramecount = new TH2D("hTbadFramecount","2D plot of bad frame count vs. time (Event number); Event number/100 events;Slot; bad frame count", EventRange,0,EventRange*EventBin,NFEMs, firstFEM, firstFEM+NFEMs);
-   TH2D *hTMean = new TH2D("hTMean", "Mean value of waveform per channel vs. time;Event number/10 events;channel number; Mean value",EventRange,0, EventRange*EventBin, NFEMs*64, 0, NFEMs*64);
-   TH2D *hTMax = new TH2D("hTMax", "Max value of waveform per channel vs. time;Event number/10 events;channel number; Max value",EventRange,0, EventRange*EventBin, NFEMs*64, 0, NFEMs*64);
-   TH2D *hTMin = new TH2D("hTMin", "Min value of waveform per channel vs. time;Event number/10 events;channel number;Mim value",EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
-   TH2D *hTRMS = new TH2D("hTRMS", "RMS value of waveform per channel vs. time;Event number/10 events;channel number;RMS value",EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
-   TH2D *hTROInum = new TH2D("hTROInum","Number of ROI per channel vs. time; Event number/100 events;channel number; Number of ROIs; entries", EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
+   TH2D *hTbadFramecount = new TH2D("hTbadFramecount","2D plot of bad frame count vs. time (Event number); Event number/500 events;Slot; bad frame count", EventRange,0,EventRange*EventBin,NFEMs, firstFEM, firstFEM+NFEMs);
+   TH2D *hTMean = new TH2D("hTMean", "Mean value of waveform per channel vs. time;Event number/500 events;channel number; Mean value",EventRange,0, EventRange*EventBin, NFEMs*64, 0, NFEMs*64);
+   TH2D *hTMax = new TH2D("hTMax", "Max value of waveform per channel vs. time;Event number/500 events;channel number; Max value",EventRange,0, EventRange*EventBin, NFEMs*64, 0, NFEMs*64);
+   TH2D *hTMin = new TH2D("hTMin", "Min value of waveform per channel vs. time;Event number/500 events;channel number;Mim value",EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
+   TH2D *hTRMS = new TH2D("hTRMS", "RMS value of waveform per channel vs. time;Event number/500 events;channel number;RMS value",EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
+   TH2D *hTROInum = new TH2D("hTROInum","Number of ROI per channel vs. time; Event number/500 events;channel number; Number of ROIs; entries", EventRange,0, EventRange*EventBin,NFEMs*64, 0, NFEMs*64);
   //nwords under Huffman compression for 64 channels (for plotting).
   // std::vector<long int> nword_channel_Huff_max(64,0);
   // std::vector<long int> nword_channel_Huff_min(64,0);
@@ -255,6 +256,8 @@ int analyzer( const char* runFile ){
   double eventJumps = 0; // FEM event number header jumps by >=2
   double totalTriggers = 0; // Total triggers
   double MAX_EVENT = DBL_MIN; //max event number
+  double MAX_FRAME = DBL_MIN;//max frame number
+  double prevFrame = -999;
   std::vector<double> prev_frame(NFEMs, -999);  //a vector to save the frame info of all FEMs from last event;
   //std::vector<long int> ref_checksum_channel;
   //std::vector<long int>* pointer_checksum_channel=NULL;
@@ -264,9 +267,10 @@ int analyzer( const char* runFile ){
   //if it's not a reference run, open the reference file.
   if(!is_reference){
  	   //static baseline
-	  refFile = new TFile("/a/data/bleeker/sbnd/runs/Run20190805102202/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_correct_ana.root","READ");
+//	  refFile = new TFile("/a/data/bleeker/sbnd/runs/Run20190805102202/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_correct_ana_statReference.root","READ");
+	  refFile = new TFile("/a/data/bleeker/sbnd/runs/Run20190805102202/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_ana.root","READ");
 	  //dynamic baseline
-	//  refFile = new TFile("/a/data/bleeker/sbnd/Run20190716101155/Run20190716101155/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_ana.root","READ");
+	  //refFile = new TFile("/a/data/bleeker/sbnd/Run20190716101155/Run20190716101155/output_NevisTPC2StreamNUandSNXMIT_generator_SN_dissect_v3_ana.root","READ");
 //	  refFile = new TFile("output_ref.root", "READ" );
 	  if( !refFile->IsOpen() ){
 	    std::cerr << "Unable to open the reference root file: output_NevisTPCNUXMIT_generator_ref.root" << std::endl;
@@ -286,13 +290,16 @@ int analyzer( const char* runFile ){
 
   //Loop over tree entries, (every entry is an event)
   // Loop over entries, 1 entry is for 1 FEM
-   //for (int ientry =2; ientry< 20; ientry++){	
+   //for (int ientry =2; ientry< 20; ientry++){
+
+   //smaller binning needed for crate tests 	
+  // for (int ientry =2; ientry<150; ientry++){
   for (int ientry=2; ientry<inTree->GetEntries(); ientry++){
   //for( int i = 0; i < entries; i++ ){
     inTree->GetEntry(ientry);
- //   if ( xmitinfo->size() > 16 or xmitinfo->size()<16){
-   //   std::cout << "XMIT packet " << ientry << " with " << xmitinfo->size() << " FEMs" << std::endl;
-   // }
+   if ( xmitinfo->size() > 16 or xmitinfo->size()<16){
+     std::cout << "XMIT packet " << ientry << " with " << xmitinfo->size() << " FEMs" << std::endl;
+    }
    // uint32_t last_frame = 0;
     for (size_t ifem = 0; ifem < xmitinfo->size(); ifem++)
     {
@@ -321,12 +328,15 @@ int analyzer( const char* runFile ){
 	ROInum =feminfo.roinum;
   //      std::cout<< ROImean.size() << "ROIS Info" <<endl;    
 //    if(event > MAX_EVENT) MAX_EVENT = event;
-    if(ientry == entries-1) MAX_EVENT = event;
- 
+    if(ientry == entries-1 and ifem == xmitinfo->size()-1){
+	 MAX_EVENT = event;
+	 MAX_FRAME = frame; 	  
+	 std::cout << "Max_Event: " << MAX_EVENT <<std::endl;
+    } 
     if(ROIrms.size() != 64) std::cout << "Event " << event << ": FEM " << slot << " only has waveforms for " << ROIrms.size() << " channels." <<std::endl; 
     //get the Max, Min, RMS of the waveform
     //loop over all the channels
-    for(int ichannel=0; ichannel< (int)ROIrms.size(); ichannel++){ 
+     for(int ichannel=0; ichannel< (int)ROIrms.size(); ichannel++){ 
  
       int channelnumber = (slot - firstFEM)*64 + ichannel;
       if (ROIrms.size() == 0)
@@ -405,7 +415,8 @@ int analyzer( const char* runFile ){
     //fill in histos
     hSlot->Fill(slot, ifem+firstFEM);
 //    hSlot->Fill(slot,(i%NFEMs)+firstFEM);   //compare slot number with manually counted slot number.
-    hTSlot->Fill(event,(ifem)+firstFEM, slot);
+    hTSlot->Fill(event,slot,slot);
+//    hTSlot->Fill(event,(ifem)+firstFEM, slot);
     hOverflow->Fill(slot,overflow);
     hTOverflow->Fill(event,slot, overflow);
     hFull->Fill(slot,full);
@@ -452,8 +463,9 @@ int analyzer( const char* runFile ){
 //    hTTriggerRate->Fill(frame*framesize,slot);
 
     //if it's the first FEM, don't calculate DeltaFrame and DeltaEvent
-    if(ifem == 0){
+    if(ientry == 2 and ifem == 0){
 	prevEvent = event;
+	prevFrame = frame;
 	prev_frame[ifem]=frame;
 	//TSample_firstSlot=triggersample;
 	continue;	
@@ -461,13 +473,17 @@ int analyzer( const char* runFile ){
   //  std::cout << " Past firts  previous frame " << std::endl; 
  
    //comparison between two adjecent FEMs (peridically).
-    int deltaFrame = frame - prev_frame[(ifem-1)];
+   // if (ientry>2 and ifem ==0) int deltaFrame = frame -prev_frame[NFEMs-1];
+     
+    int deltaFrame = frame - prevFrame;
 //    std::cout << " Past delta frame " <<std::endl;
     hDeltaFrame->Fill(deltaFrame,slot);
     hTDeltaFrame->Fill(event,slot, deltaFrame);
     //if( deltaFrame != 0 ) totalTriggers++;
 
     int deltaEvent = event - prevEvent;
+  //  std::cout<< event <<" Event, prevEvent " << prevEvent <<std::endl; 
+   // std::cout << frame << " Frame, prevFrame " << deltaFrame <<std::endl;
 //    std::cout << deltaEvent << " NEW event" <<std::endl; 
     hDeltaEvent->Fill(slot,deltaEvent);
     hTDeltaEvent->Fill(event,slot, deltaEvent);
@@ -486,6 +502,8 @@ int analyzer( const char* runFile ){
    // else if(slot == firstFEM) TSample_firstSlot=triggersample;
     else std::cout << "ERROR: new event start from a non-first slot!!" << std::endl;  
 
+
+    if (deltaEvent<0 or deltaFrame <0) std::cout << "Error: new frame smaller than previous frame in entry: " << ientry <<std::endl;
   //  std::cout << deltaEvent << " Past delta event " <<std::endl;
 
     //use Frame difference between this event and previous event to calculate the real-time trigger rate.
@@ -525,9 +543,11 @@ int analyzer( const char* runFile ){
 
     //update previous frame, event, and slot.
    // std::cout << 
+    prevFrame = frame;
     prev_frame[ifem%NFEMs]=frame;
     prevEvent = event;
     prevSlot = slot;
+     
   //  std::cout << " calculating last frame" <<std::endl;
    }//end of loop over FEMs
 
@@ -948,7 +968,8 @@ int analyzer( const char* runFile ){
 	  TH2D *hRef;
 	  TH2D *hTRef;
 	  TVectorD* vRef = (TVectorD*)refFile->Get("max_event"); //(*vRef)[0] will be the largest event number in reference run 
-	  double ref_event = ((*vRef))[0];
+	  ///double ref_event = ((*vRef))[0];
+	  double ref_event = 150;
 	  std::cout << "ref_event is " << ref_event << std::endl;
 	 // std::vector<long int>* ref_Huff;
 	 // refFile->GetObject("nword_slot",ref_Huff);
@@ -983,12 +1004,14 @@ int analyzer( const char* runFile ){
 	  if(hFrames->GetMaximum() > z_max) z_max = hFrames->GetMaximum();
 	  if(hFrames->GetMinimum() < z_min) z_min = hFrames->GetMinimum();
 	  hFrames->SetAxisRange(z_min-1, z_max+1, "Z");
-	  hFrames->SetAxisRange(0, prev_frame[(entries-1)%NFEMs], "X");
+	  hFrames->SetAxisRange(0, MAX_FRAME, "X");
+	  //hFrames->SetAxisRange(0, prev_frame[(entries-1)%NFEMs], "X");
 	  hFrames->Draw("colz");
 	  c->cd(2);
 	  gPad->SetLogz(1);    //set log scale on z.
 	  hRef->SetAxisRange(z_min-1, z_max+1, "Z"); 
-	  hRef->SetAxisRange(0, prev_frame[(entries-1)%NFEMs], "X");
+	  hRef->SetAxisRange(0, MAX_FRAME, "X");
+	  //hRef->SetAxisRange(0, prev_frame[(entries-1)%NFEMs], "X");
 	  hRef->SetTitle("reference run");
 	  hRef->Draw("colz");
 	  c->Update();
@@ -1063,6 +1086,7 @@ int analyzer( const char* runFile ){
 
 	  
 	  hRef = (TH2D*)refFile->Get("hSlot");
+	  std::cout << hRef->GetEntries() << std::endl;
 	  hTRef = (TH2D*)refFile->Get("hTSlot");
 	  hRef->Scale(MAX_EVENT/ref_event); //scale the reference plots with the same total number of events
 	  hTRef->Scale(1/(double)EventBin);
@@ -1096,7 +1120,8 @@ int analyzer( const char* runFile ){
 	  hTSlot->Scale(1/(double)EventBin);
 	  if(hTSlot->GetMaximum() > z_maxT) z_maxT = hTSlot->GetMaximum();
 	  if(hTSlot->GetMinimum() < z_minT) z_minT = hTSlot->GetMinimum();
-	  hTSlot->SetAxisRange(z_minT-1, z_maxT+1, "Z");
+	  hTSlot->SetAxisRange(firstFEM-1,20,"Z");//trouble shootin this
+//	  hTSlot->SetAxisRange(z_minT-1, z_maxT+1, "Z");
 	  hTSlot->Draw("colz");
 	  c->cd(2);
 	  gPad->SetLogz(1);    //set log scale on z.
@@ -1801,12 +1826,12 @@ int analyzer( const char* runFile ){
 	  c->Divide(1,2);
 	  c->cd(1);
 	  gPad->SetLogz(1);
-	  hdiff_checksum->SetAxisRange(-100,100, "Y");
+	  hdiff_checksum->SetAxisRange(26000,30000, "Y");
 	  hdiff_checksum->SetTitle("checksum - mychecksum (zoom in)");
 	  hdiff_checksum->Draw("colz");
 	  c->cd(2);
 	  gPad->SetLogz(1);
-	  hRef->SetAxisRange(-100,100, "Y");
+	  hRef->SetAxisRange(26000,30000, "Y");
 	  hRef->Draw("colz");
 	  c->Update();
 	  c->Write("cdiff_checksum_zoom");
@@ -1819,7 +1844,7 @@ int analyzer( const char* runFile ){
 	  c->cd(1);
 	  hTdiff_checksum->Draw("colz");
 	  c->cd(2);
-	  hTRef->SetAxisRange(-4100*EventBin, 4100*EventBin, "Z");
+	  hTRef->SetAxisRange(-40000*EventBin, 40000*EventBin, "Z");
 	  hTRef->SetTitle("reference run");
 	  hTRef->Draw("colz");
 	  c->Update();
