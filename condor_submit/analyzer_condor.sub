@@ -1,0 +1,61 @@
+# condor submit description file
+# Guanqun Ge 2018/07/20
+##########################################
+
+
+
+##executable is the .exe you want to execute(need to indicate full path), and arguments are the argument this executable take.
+Executable = /a/share/amsterdam/gegq/sbnd/DecoderTools/analyzer.exe
+Arguments = inputfile
+Universe = vanilla
+environment = LD_LIBRARY_PATH=/usr/nevis/root-6.16.00/lib:/usr/nevis/Python-3.6.3/lib:/usr/nevis/gcc-6.4.0/lib64
+
+## input file that needs to be transfered in order for jobs to run on nodes.
+input=inputfile
+
+##If the job requires other input files, the submit description file should utilize the transfer_input_files command.
+##usually you don't need to transfer file bacause the condor machine can find where the files are and access them.
+#transfer_input_files = inputfile
+
+
+
+
+## 'should_transfer_files' command explicitly enables or disables the file transfer mechanism. it takes three value: "IF_NEEDED", "YES", "NO"
+should_transfer_files = YES
+
+# if you define `should_transfer_files`, then you must also define `when_to_transfer_output`.
+## 'when_to_transfer_output' command tells HTCondor when output files are to be transferred back to the submit machine. it takes two values: "ON_EXIT", "ON_EXIT_OR_EVICT"
+when_to_transfer_output = ON_EXIT
+
+
+
+
+## A log file, foo.log, will also be produced that contains events the job had during its lifetime, and contains job's exit conditions
+Log = logname
+
+# output file constains information program would generally write to the screen, ie. std::out
+Output = outname
+
+
+# error file constains error messages program generally writes to the screen. ie. std::err.
+Error = errname
+
+ 
+##request_memory command is included to insure that the mathematica jobs match with and then execute on pool machines that provide at least 1 GByte of memory.
+## request_memory = 1 GB
+
+
+## To run jobs on a given machine which satiafy the requirements
+# requirements = Memory >= 64, to run jobs on machine with more than 64GB memory
+
+
+
+## use Rank atribute to tell condor that you prefer machines that meets the requirement expression. in this case, we prefer faster machines to run your job
+#Rank = Mips
+
+
+Notification = never
+
+## the number of executable you want to run is indicated in Queue. Default number is 1.
+Queue
+### filenumber from /nevis/houston/home/gg2690/datanumber.txt
